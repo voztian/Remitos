@@ -1,6 +1,6 @@
 {
-  "name": "Remitos",
-  "short_name": "Remitos",
+ "name": "RemitGo",
+"short_name": "RemitGo",
   "description": "Gestión de remitos de entrega",
   "start_url": "/",
   "display": "standalone",
