@@ -122,9 +122,10 @@
       <p class="section-title">Cargar remito</p>
       <p class="section-sub">Sacá o subí la foto del remito firmado</p>
       <div class="upload-zone">
-        <input type="file" accept="image/*"  id="file-input" onchange="handleFile(this)" />
+<input type="file" accept="image/*" capture="environment" id="file-input" onchange="handleFile(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:50%;height:100%" />
+<input type="file" accept="image/*" id="file-gallery" onchange="handleFile(this)" style="position:absolute;right:0;top:0;opacity:0;cursor:pointer;width:50%;height:100%" />
         <div class="upload-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
-        <div class="upload-title">Tocar para fotografiar o subir imagen</div>
+       <div class="upload-title">📷 Cámara &nbsp;&nbsp;&nbsp; 🖼️ Galería</div>
         <div class="upload-hint">La foto se comprime automáticamente</div>
       </div>
       <div class="preview-wrap hidden" id="preview-wrap">
