@@ -288,7 +288,7 @@
       currentImgData = null;
       document.getElementById('preview-wrap').classList.add('hidden');
       document.getElementById('preview-img').src = '';
-      document.getElementById('file-input').value = '';
+      
       ['f-cliente','f-numero','f-chofer','f-horario'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('f-fecha').value = '';
       showToast('✅ Remito guardado');
