@@ -43,8 +43,12 @@ la misma pestaña el enlace QR que el usuario intentaba abrir antes de ingresar.
 
 ## 3. Prueba de aceptación
 
-- Ingresar con una cuenta Google que nunca usó GoRemitos: debe pedir nombre y
-  permitir crear una empresa o unirse con el código de 12 caracteres.
+- Autorizar primero el email de prueba desde **Usuarios** en GoRemitos.
+- Ingresar con Google usando exactamente ese email: debe aceptar la
+  autorización sin pedir ningún código.
+- Ingresar con una cuenta Google no autorizada: no debe mostrar datos de ninguna
+  empresa; debe permitir reintentar después de que un administrador la agregue
+  o crear una empresa nueva.
 - Volver a ingresar con esa cuenta: debe abrir la app directamente.
 - Ingresar con Google usando el mismo email verificado de una cuenta existente:
   debe conservar el mismo usuario y sus permisos.
@@ -60,6 +64,5 @@ la misma pestaña el enlace QR que el usuario intentaba abrir antes de ingresar.
   necesitan identidad básica, email y perfil.
 - Si cambiás de dominio, actualizá tanto Google Cloud como Supabase antes de
   publicar.
-
-Al preparar esta versión, el proveedor Google del proyecto todavía figuraba
-desactivado. Una vez completados estos pasos, el código no requiere cambios.
+- Una autorización sólo se acepta cuando Google/Supabase entrega un email
+  confirmado que coincide exactamente con el cargado por el administrador.

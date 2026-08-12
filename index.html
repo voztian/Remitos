@@ -320,7 +320,7 @@ body{background:var(--page);color:var(--tx)}
     <div class="div-or"><span>o crear con email</span></div>
     <div style="display:flex;gap:6px;padding:3px;background:var(--bg-input);border-radius:9px;border:1px solid var(--bd);margin-bottom:16px">
       <button type="button" id="tab-empresa" class="btn" style="padding:8px;font-size:13px;flex:1;background:var(--cta-bg);color:var(--cta-tx)" onclick="regTab('empresa')">Crear empresa</button>
-      <button type="button" id="tab-unirse" class="btn" style="padding:8px;font-size:13px;flex:1;background:transparent;color:var(--tx3)" onclick="regTab('unirse')">Unirme a una</button>
+      <button type="button" id="tab-unirse" class="btn" style="padding:8px;font-size:13px;flex:1;background:transparent;color:var(--tx3)" onclick="regTab('autorizado')">Ya estoy autorizado</button>
     </div>
     <div id="form-empresa">
       <div class="f-sec">Datos de la empresa</div>
@@ -333,13 +333,11 @@ body{background:var(--page);color:var(--tx)}
       <button type="button" class="btn bp" style="margin-top:4px" onclick="doRegister()">Crear cuenta y entrar</button>
     </div>
     <div id="form-unirse" style="display:none">
-      <div class="f-sec">Código de invitación</div>
-      <div class="field"><label>Código de la empresa *</label><input id="j-codigo" placeholder="A1B2C3D4E5F6" type="text" maxlength="12" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace"></div>
-      <div class="div-or"><span>tus datos</span></div>
+      <div class="notice" style="margin:0 0 15px"><i class="ti ti-mail-check"></i><div class="t">Tu email debe estar autorizado</div><div class="s">Usá exactamente el correo que cargó el administrador de tu empresa. No necesitás ningún código.</div></div>
       <div class="field"><label>Nombre completo *</label><input id="j-nombre" placeholder="Juan García" type="text" maxlength="100"></div>
-      <div class="field"><label>Email *</label><input id="j-email" placeholder="juan@empresa.com" type="email" maxlength="254" autocomplete="email"></div>
+      <div class="field"><label>Email autorizado *</label><input id="j-email" placeholder="juan@empresa.com" type="email" maxlength="254" autocomplete="email"></div>
       <div class="field"><label>Contraseña *</label><input id="j-pass" placeholder="Mínimo 8 caracteres" type="password" autocomplete="new-password"></div>
-      <button type="button" class="btn bp" style="margin-top:4px" onclick="doUnirse()">Unirme y entrar</button>
+      <button type="button" class="btn bp" style="margin-top:4px" onclick="doRegistroAutorizado()">Crear cuenta y entrar</button>
     </div>
     <div style="font-size:11.5px;color:var(--tx4);text-align:center;margin-top:10px;line-height:1.55">Al registrarte aceptás el tratamiento de datos según la <span style="color:var(--or);cursor:pointer" onclick="showPriv()">política de privacidad</span></div>
     <div class="f-link">¿Ya tenés cuenta? <span onclick="showView('view-login')">Iniciá sesión</span></div>
@@ -394,23 +392,19 @@ body{background:var(--page);color:var(--tx)}
 <!-- ONBOARDING DESPUÉS DE GOOGLE/OAUTH -->
 <div id="view-onboarding" class="auth" style="display:none">
   <div class="f-logo"><b>Go</b>Remitos</div>
-  <div class="f-sub">Terminá de configurar tu acceso</div>
+  <div class="f-sub">Todavía no encontramos tu acceso</div>
   <div class="f-card">
     <div class="err" id="oauth-err"></div>
     <div class="oauth-user"><svg class="google-g" aria-hidden="true"><use href="#google-g-mark"></use></svg><div><div class="verified-title">Sesión verificada</div><div class="mail" id="oauth-email">—</div></div></div>
+    <div class="auth-help">Si pertenecés a una empresa, pedile a un administrador que autorice este mismo email. Después tocá <b>Reintentar acceso</b>.</div>
     <div class="field"><label>Nombre completo *</label><input id="o-nombre" placeholder="Juan García" type="text" maxlength="100" autocomplete="name"></div>
-    <div style="display:flex;gap:6px;padding:3px;background:var(--bg-input);border-radius:9px;border:1px solid var(--bd);margin:4px 0 16px">
-      <button type="button" id="o-tab-empresa" class="btn" style="padding:8px;font-size:13px;flex:1;background:var(--cta-bg);color:var(--cta-tx)" onclick="oauthTab('empresa')">Crear empresa</button>
-      <button type="button" id="o-tab-unirse" class="btn" style="padding:8px;font-size:13px;flex:1;background:transparent;color:var(--tx3)" onclick="oauthTab('unirse')">Unirme a una</button>
-    </div>
+    <button type="button" class="btn bp" id="o-retry" style="margin-bottom:17px" onclick="reintentarAccesoAutorizado()"><i class="ti ti-refresh"></i>Reintentar acceso</button>
+    <div class="div-or"><span>o crear una empresa nueva</span></div>
     <div id="o-form-empresa">
       <div class="field"><label>Nombre de la empresa *</label><input id="o-empresa" placeholder="Distribuidora Sol S.R.L." type="text" maxlength="120"></div>
       <div class="field"><label>CUIT (opcional)</label><input id="o-cuit" placeholder="30-12345678-9" type="text" maxlength="20"></div>
     </div>
-    <div id="o-form-unirse" style="display:none">
-      <div class="field"><label>Código de invitación *</label><input id="o-codigo" placeholder="A1B2C3D4E5F6" type="text" maxlength="12" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace"></div>
-    </div>
-    <button type="button" class="btn bp" id="o-submit" style="margin-top:4px" onclick="doOAuthOnboarding()">Crear empresa y continuar</button>
+    <button type="button" class="btn bl" id="o-submit" style="margin-top:4px" onclick="doOAuthOnboarding()">Crear empresa y continuar</button>
     <div style="font-size:11.5px;color:var(--tx4);text-align:center;margin-top:10px;line-height:1.55">Al continuar aceptás el tratamiento de datos según la <span style="color:var(--or);cursor:pointer" onclick="showPriv()">política de privacidad</span>.</div>
     <div class="f-link"><span onclick="doLogout()">Cerrar sesión</span></div>
   </div>
@@ -469,6 +463,7 @@ body{background:var(--page);color:var(--tx)}
 const SUPABASE_URL='https://ospgkovvqqaaebzswngv.supabase.co';
 const SUPABASE_KEY='sb_publishable_Y66zEF0bcef_BRtlbJYIDg_9QrqLiuu';
 const RECOVERY_RETURN=(()=>{const h=new URLSearchParams(window.location.hash.replace(/^#/,'')),q=new URLSearchParams(window.location.search);return h.get('type')==='recovery'||q.get('type')==='recovery';})();
+const REGISTRO_AUTORIZADO=new URLSearchParams(window.location.search).get('registro')==='autorizado';
 let sb=null,estadoPerfil='sin_sesion',recoveryMode=RECOVERY_RETURN||sessionStorage.getItem('grm_recovery_pending')==='1';
 function initSupabase(){
   if(sb)return true;
@@ -511,11 +506,12 @@ async function cargarSesion(){
   const {data:{session},error:sessionError}=await sb.auth.getSession();
   if(sessionError){estadoPerfil='error';console.error(sessionError);return false;}
   if(!session){estadoPerfil='sin_sesion';return false;}
-  const {data:perfil,error}=await sb.from('perfiles').select('id,nombre,rol,empresa_id,activo,empresas(nombre,cuit)').eq('id',session.user.id).maybeSingle();
+  const {data,error}=await sb.rpc('obtener_mi_acceso');
   if(error){estadoPerfil='error';console.error(error);return false;}
+  const perfil=Array.isArray(data)?data[0]:data;
   if(!perfil){estadoPerfil='sin_perfil';return false;}
-  if(perfil.activo===false){estadoPerfil='inactivo';await sb.auth.signOut();showView('view-welcome');showErr('auth-err','Tu acceso está desactivado. Contactá al administrador.');return false;}
-  cu={id:perfil.id,email:session.user.email,nombre:perfil.nombre,rol:perfil.rol,empresa:perfil.empresas?.nombre||'',empresaCuit:perfil.empresas?.cuit||'',empresaId:perfil.empresa_id};
+  if(perfil.activo===false){estadoPerfil='inactivo';await sb.auth.signOut();showView('view-login');showErr('log-err','Tu acceso a esta empresa fue eliminado. Contactá a un administrador si necesitás recuperarlo.');return false;}
+  cu={id:perfil.usuario_id,email:perfil.email||session.user.email,nombre:perfil.nombre,rol:perfil.rol,empresa:perfil.empresa_nombre||'',empresaCuit:perfil.empresa_cuit||'',empresaId:perfil.empresa_id};
   await cargarRemitos();
   estadoPerfil='ok';
   arrancarApp();
@@ -578,8 +574,8 @@ const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const ST={Firmado:{col:'var(--green)',lbl:'Firmado'},Pendiente:{col:'var(--or)',lbl:'En camino'},Disconforme:{col:'var(--red)',lbl:'Disconforme'},Rechazado:{col:'var(--red)',lbl:'Rechazado'},Manual:{col:'var(--tx3)',lbl:'Manual'}};
 
-let cu=null,usuariosEmpresa=[];
-let remitos=[],itemsActual=[],itemsEstado=[],firmaData=null,signing=false,confActual=null,remitoActual=null,clockInterval=null,realtimeChannel=null,manualFoto=null,entregaFoto=null,isOnline=navigator.onLine,filtro='todos',tabActual='',editandoId=null,entregaSeleccionadaId=null,firmaCanvasInicializado=null,oauthTipo='empresa';
+let cu=null,usuariosEmpresa=[],accesosEmpresa=[];
+let remitos=[],itemsActual=[],itemsEstado=[],firmaData=null,signing=false,confActual=null,remitoActual=null,clockInterval=null,accessCheckInterval=null,realtimeChannel=null,manualFoto=null,entregaFoto=null,isOnline=navigator.onLine,filtro='todos',tabActual='',editandoId=null,entregaSeleccionadaId=null,firmaCanvasInicializado=null;
 const tokenObjetivo=new URLSearchParams(window.location.search).get('remito');
 
 async function optimizarFoto(file){
@@ -620,6 +616,17 @@ function showOk(id,msg){const el=document.getElementById(id);if(el){el.textConte
 function empty(ico,t,s){return `<div class="empty"><i class="ti ${ico}"></i><div class="t">${t}</div>${s?`<div class="s">${s}</div>`:''}</div>`;}
 function statusPill(estado){const s=ST[estado]||ST.Pendiente;return `<span class="status" style="color:${s.col}"><span class="st-dot" style="background:${s.col}"></span>${s.lbl}</span>`;}
 
+function abrirRegistroAutorizado(){
+  showView('view-register');regTab('autorizado');
+  const url=new URL(window.location.href);url.searchParams.delete('registro');
+  history.replaceState({},document.title,`${url.pathname}${url.search}${url.hash}`);
+  setTimeout(()=>document.getElementById('j-nombre')?.focus(),0);
+}
+function limpiarParametroRegistro(){
+  const url=new URL(window.location.href);if(!url.searchParams.has('registro'))return;
+  url.searchParams.delete('registro');history.replaceState({},document.title,`${url.pathname}${url.search}${url.hash}`);
+}
+
 /* ===== AUTH ===== */
 function authErrorId(){if(document.getElementById('view-login').style.display!=='none')return 'log-err';if(document.getElementById('view-register').style.display!=='none')return 'reg-err';return 'auth-err';}
 async function doGoogle(){
@@ -629,23 +636,12 @@ async function doGoogle(){
   const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:`${window.location.origin}${window.location.pathname}`,queryParams:{prompt:'select_account'}}});
   if(error){sessionStorage.removeItem('grm_oauth_return');botones.forEach(b=>b.disabled=false);showErr(authErrorId(),'No se pudo iniciar con Google: '+error.message);}
 }
-function oauthTab(tipo){
-  oauthTipo=tipo;const empresa=tipo==='empresa';
-  document.getElementById('o-form-empresa').style.display=empresa?'block':'none';
-  document.getElementById('o-form-unirse').style.display=empresa?'none':'block';
-  const te=document.getElementById('o-tab-empresa'),tu=document.getElementById('o-tab-unirse');
-  te.style.background=empresa?'var(--cta-bg)':'transparent';te.style.color=empresa?'var(--cta-tx)':'var(--tx3)';
-  tu.style.background=!empresa?'var(--cta-bg)':'transparent';tu.style.color=!empresa?'var(--cta-tx)':'var(--tx3)';
-  const submit=document.getElementById('o-submit');if(submit&&!submit.disabled)submit.textContent=oauthSubmitLabel();
-}
-function oauthSubmitLabel(){return oauthTipo==='empresa'?'Crear empresa y continuar':'Unirme a la empresa';}
-function mostrarOnboarding(session,tipoSugerido){
+function mostrarOnboarding(session){
   if(!session?.user){showView('view-welcome');showErr('auth-err','No se pudo leer la cuenta. Volvé a iniciar sesión.');return;}
   const meta=session.user.user_metadata||{},email=session.user.email||'';
   showView('view-onboarding');document.getElementById('oauth-email').textContent=email;
   document.getElementById('o-nombre').value=meta.nombre||meta.full_name||meta.name||email.split('@')[0]||'';
-  document.getElementById('o-empresa').value=meta.empresa_nombre||'';document.getElementById('o-cuit').value=meta.empresa_cuit||'';document.getElementById('o-codigo').value=(meta.codigo_invitacion||'').toUpperCase();
-  oauthTab(tipoSugerido==='unirse'?'unirse':'empresa');
+  document.getElementById('o-empresa').value=meta.empresa_nombre||'';document.getElementById('o-cuit').value=meta.empresa_cuit||'';
 }
 async function resolverSesionInicial(){
   const hashParams=new URLSearchParams(window.location.hash.replace(/^#/,'')),queryParams=new URLSearchParams(window.location.search),oauthError=hashParams.get('error_description')||queryParams.get('error_description');
@@ -656,27 +652,34 @@ async function resolverSesionInicial(){
   }
   const {data:{session},error}=await sb.auth.getSession();
   if(error){showView('view-welcome');showErr('auth-err','No se pudo leer la sesión.');return;}
-  if(!session){showView('view-welcome');return;}
+  if(!session){if(REGISTRO_AUTORIZADO)abrirRegistroAutorizado();else showView('view-welcome');return;}
   if(recoveryMode){showPasswordUpdate(session);return;}
   const retorno=sessionStorage.getItem('grm_oauth_return');sessionStorage.removeItem('grm_oauth_return');
   if(retorno&&retorno.startsWith('/')&&retorno!==`${window.location.pathname}${window.location.search}`){window.location.replace(`${window.location.origin}${retorno}`);return;}
+  const {error:onboardingError}=await sb.rpc('completar_onboarding');
+  if(!onboardingError&&await cargarSesion())return;
   if(await cargarSesion())return;
   if(estadoPerfil==='inactivo')return;
   if(estadoPerfil==='error'){showView('view-welcome');showErr('auth-err','No se pudo consultar tu perfil. Intentá nuevamente.');return;}
-  const meta=session.user.user_metadata||{};
-  if(meta.onboarding_tipo){const {error:onboardingError}=await sb.rpc('completar_onboarding');if(!onboardingError&&await cargarSesion())return;}
-  mostrarOnboarding(session,meta.onboarding_tipo);
+  mostrarOnboarding(session);
 }
 async function doOAuthOnboarding(){
   if(!requireOnline())return;
-  const nombre=gv('o-nombre'),empresa=gv('o-empresa'),cuit=gv('o-cuit'),codigo=gv('o-codigo').toUpperCase();
+  const nombre=gv('o-nombre'),empresa=gv('o-empresa'),cuit=gv('o-cuit');
   if(nombre.length<2){showErr('oauth-err','Ingresá tu nombre completo');return;}
-  if(oauthTipo==='empresa'&&empresa.length<2){showErr('oauth-err','Ingresá el nombre de la empresa');return;}
-  if(oauthTipo==='unirse'&&!/^[0-9A-F]{12}$/.test(codigo)){showErr('oauth-err','Ingresá el código de invitación de 12 caracteres');return;}
+  if(empresa.length<2){showErr('oauth-err','Ingresá el nombre de la empresa');return;}
   const btn=document.getElementById('o-submit');setBusy(btn,true,'Configurando...');
-  const {error}=await sb.rpc('completar_onboarding_interactivo',{p_tipo:oauthTipo,p_nombre:nombre,p_empresa_nombre:oauthTipo==='empresa'?empresa:null,p_empresa_cuit:oauthTipo==='empresa'?cuit:null,p_codigo:oauthTipo==='unirse'?codigo:null});
-  if(error){showErr('oauth-err',error.message);setBusy(btn,false,oauthSubmitLabel());return;}
-  if(!await cargarSesion()){showErr('oauth-err','El perfil se creó, pero no pudo cargarse. Recargá la página.');setBusy(btn,false,oauthSubmitLabel());}
+  const {error}=await sb.rpc('completar_onboarding_interactivo',{p_tipo:'empresa',p_nombre:nombre,p_empresa_nombre:empresa,p_empresa_cuit:cuit,p_codigo:null});
+  if(error){showErr('oauth-err',error.message);setBusy(btn,false,'Crear empresa y continuar');return;}
+  if(!await cargarSesion()){showErr('oauth-err','El perfil se creó, pero no pudo cargarse. Recargá la página.');setBusy(btn,false,'Crear empresa y continuar');}
+}
+async function reintentarAccesoAutorizado(){
+  if(!requireOnline())return;
+  const nombre=gv('o-nombre');if(nombre.length<2){showErr('oauth-err','Ingresá tu nombre completo');return;}
+  const btn=document.getElementById('o-retry');setBusy(btn,true,'Comprobando...');
+  const {error}=await sb.rpc('completar_onboarding_interactivo',{p_tipo:'autorizado',p_nombre:nombre,p_empresa_nombre:null,p_empresa_cuit:null,p_codigo:null});
+  if(error){showErr('oauth-err','Este email todavía no está autorizado. Pedile al administrador que lo agregue.');setBusy(btn,false,'<i class="ti ti-refresh"></i>Reintentar acceso');return;}
+  if(!await cargarSesion()){showErr('oauth-err','El acceso fue aceptado, pero no pudo cargarse. Recargá la página.');setBusy(btn,false,'<i class="ti ti-refresh"></i>Reintentar acceso');}
 }
 async function doRegister(){
   if(!requireOnline())return;
@@ -689,7 +692,7 @@ async function doRegister(){
   if(e1){showErr('reg-err',e1.message);setBusy(btn,false,'Crear cuenta y entrar');return;}
   if(!signUp.session){
     setBusy(btn,false,'Crear cuenta y entrar');
-    alert('Cuenta creada. Confirmá el email y después iniciá sesión. La empresa se completará automáticamente.');
+    alert('Cuenta creada. Confirmá el email y después iniciá sesión. GoRemitos completará tu acceso automáticamente.');
     showView('view-login');document.getElementById('l-email').value=email;return;
   }
   const {error:e2}=await sb.rpc('completar_onboarding');
@@ -704,14 +707,16 @@ async function doLogin(){
   const btn=document.querySelector('#view-login button.bp');setBusy(btn,true,'Ingresando...');
   const {error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){showErr('log-err','Email o contraseña incorrectos');setBusy(btn,false,'Ingresar');return;}
-  let ok=await cargarSesion();
-  if(!ok&&estadoPerfil==='sin_perfil'){
-    const {error:onboardingError}=await sb.rpc('completar_onboarding');
-    if(!onboardingError)ok=await cargarSesion();
+  const {error:onboardingError}=await sb.rpc('completar_onboarding');
+  const ok=await cargarSesion();
+  if(ok)return;
+  if(estadoPerfil==='inactivo'){setBusy(btn,false,'Ingresar');return;}
+  if(estadoPerfil==='sin_perfil'){
+    const {data:{session}}=await sb.auth.getSession();setBusy(btn,false,'Ingresar');mostrarOnboarding(session);
+    if(onboardingError)setTimeout(()=>showErr('oauth-err','Este email todavía no está autorizado por una empresa.'),50);
+    return;
   }
-  if(!ok&&estadoPerfil==='sin_perfil'){const {data:{session}}=await sb.auth.getSession();setBusy(btn,false,'Ingresar');mostrarOnboarding(session,session?.user?.user_metadata?.onboarding_tipo);return;}
-  if(!ok&&estadoPerfil==='inactivo'){setBusy(btn,false,'Ingresar');return;}
-  if(!ok){showErr('log-err','No se pudo cargar tu acceso. Intentá nuevamente.');setBusy(btn,false,'Ingresar');}
+  showErr('log-err','No se pudo cargar tu acceso. Intentá nuevamente.');setBusy(btn,false,'Ingresar');
 }
 function openResetRequest(){
   const email=gv('l-email'),input=document.getElementById('reset-email'),ok=document.getElementById('reset-ok');
@@ -753,8 +758,29 @@ async function saveNewPassword(){
 async function cancelPasswordRecovery(){
   await sb.auth.signOut();recoveryMode=false;sessionStorage.removeItem('grm_recovery_pending');history.replaceState({},document.title,window.location.pathname);showView('view-login');
 }
-async function doLogout(){if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}sessionStorage.removeItem('grm_oauth_return');await sb.auth.signOut();cu=null;remitos=[];estadoPerfil='sin_sesion';if(clockInterval)clearInterval(clockInterval);showView('view-welcome');}
+async function doLogout(){
+  if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
+  sessionStorage.removeItem('grm_oauth_return');await sb.auth.signOut();cu=null;remitos=[];estadoPerfil='sin_sesion';
+  if(clockInterval)clearInterval(clockInterval);if(accessCheckInterval)clearInterval(accessCheckInterval);accessCheckInterval=null;showView('view-welcome');
+}
+async function cerrarPorAccesoEliminado(){
+  if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
+  if(accessCheckInterval)clearInterval(accessCheckInterval);accessCheckInterval=null;
+  await sb.auth.signOut();cu=null;remitos=[];estadoPerfil='inactivo';showView('view-login');showErr('log-err','Tu acceso a esta empresa fue eliminado. Contactá a un administrador si necesitás recuperarlo.');
+}
+async function verificarAccesoVigente(){
+  if(!cu||!isOnline||!sb)return;
+  const {data,error}=await sb.rpc('obtener_mi_acceso');if(error)return;
+  const acceso=Array.isArray(data)?data[0]:data;
+  if(!acceso||acceso.activo===false){await cerrarPorAccesoEliminado();return;}
+  if(String(acceso.empresa_id)!==String(cu.empresaId)||acceso.rol!==cu.rol)window.location.reload();
+}
+function iniciarControlAcceso(){
+  if(accessCheckInterval)clearInterval(accessCheckInterval);
+  accessCheckInterval=setInterval(verificarAccesoVigente,30000);
+}
 function arrancarApp(){
+  limpiarParametroRegistro();
   showView('view-app');
   const av=document.getElementById('h-av');
   av.textContent=cu.nombre.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
@@ -763,7 +789,7 @@ function arrancarApp(){
   document.getElementById('h-role').textContent=ROL_LBL[cu.rol];
   document.getElementById('empresa-nombre').textContent=cu.empresa;
   if(!isOnline)document.getElementById('offline-bar').classList.add('show');
-  startClock();buildNav();iniciarRealtime();
+  startClock();buildNav();iniciarRealtime();iniciarControlAcceso();
 }
 function iniciarRealtime(){
   if(realtimeChannel)return;
@@ -773,8 +799,9 @@ function startClock(){
   function tick(){const now=new Date();const ct=document.getElementById('clock-time');const cd=document.getElementById('clock-date');if(ct)ct.textContent=[now.getHours(),now.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');if(cd)cd.textContent=`${DIAS[now.getDay()].slice(0,3)} ${now.getDate()} ${MESES[now.getMonth()].slice(0,3)}`;}
   tick();if(clockInterval)clearInterval(clockInterval);clockInterval=setInterval(tick,15000);
 }
-window.addEventListener('online',()=>{isOnline=true;document.getElementById('offline-bar').classList.remove('show');const sb=document.getElementById('sync-bar');sb.classList.add('show');setTimeout(()=>sb.classList.remove('show'),3000);});
-window.addEventListener('offline',()=>{isOnline=false;document.getElementById('offline-bar').classList.add('show');});
+window.addEventListener('online',()=>{isOnline=true;document.getElementById('offline-bar')?.classList.remove('show');const sync=document.getElementById('sync-bar');if(sync){sync.classList.add('show');setTimeout(()=>sync.classList.remove('show'),3000);}verificarAccesoVigente();});
+window.addEventListener('offline',()=>{isOnline=false;document.getElementById('offline-bar')?.classList.add('show');});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verificarAccesoVigente();});
 
 /* ===== NAV ===== */
 function buildNav(){
@@ -951,7 +978,7 @@ async function cargarEventosRemito(id){
   const el=document.getElementById('audit-remito');if(!el)return;
   const {data,error}=await sb.from('remito_eventos').select('evento,created_at').eq('remito_id',id).order('created_at',{ascending:true});
   if(error){el.innerHTML='<div class="sub" style="padding:0 20px">No se pudo cargar la trazabilidad.</div>';return;}
-  const labels={creado:'Remito creado',editado:'Remito editado',entrega_cerrada:'Entrega cerrada',manual_cargado:'Respaldo manual cargado',pendiente_eliminado:'Pendiente eliminado'};
+  const labels={creado:'Remito creado',editado:'Remito editado',entrega_cerrada:'Entrega cerrada',manual_cargado:'Respaldo manual cargado',pendiente_eliminado:'Pendiente eliminado',chofer_desasignado:'Chofer desasignado'};
   el.innerHTML=(data||[]).map(ev=>`<div class="rowitem"><span class="dot" style="background:var(--tx3)"></span><div style="flex:1"><div class="rt">${esc(labels[ev.evento]||ev.evento)}</div></div><span class="time tnum">${new Date(ev.created_at).toLocaleString('es-AR')}</span></div>`).join('')||'<div class="sub" style="padding:0 20px">Sin eventos registrados.</div>';
 }
 
@@ -959,27 +986,97 @@ async function cargarEventosRemito(id){
 function renderUsuarios(){
   return `<div class="screen active">
     <div class="pagehead"><div class="tit">Usuarios</div><div class="sub">Accesos de ${esc(cu.empresa)}</div></div>
-    <div id="usr-invite" style="margin:14px 20px 0;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg-input)">
-      <div style="font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.6px">Código de invitación</div>
-      <div style="font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.5">Compartí este código con tus choferes/oficina. Al registrarse en GoRemitos lo usan para unirse a tu empresa.</div>
-      <div id="inv-codigo" style="margin-top:10px;font-family:monospace;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--or)">···</div>
-      <button class="bgh" style="margin-top:8px" onclick="rotarCodigo()">Generar un código nuevo</button>
+    <div style="margin:14px 20px 0;padding:15px;border:1px solid var(--bd);border-radius:12px;background:var(--bg-input)">
+      <div style="font-size:13px;font-weight:650;color:var(--tx)">Autorizar un email</div>
+      <div style="font-size:11px;color:var(--tx3);margin:4px 0 14px;line-height:1.5">La persona deberá ingresar con este mismo correo. No tendrá que escribir ningún código.</div>
+      <div class="err" id="usr-error"></div><div class="okmsg" id="usr-ok"></div>
+      <div class="field"><label>Email *</label><input id="usr-email" placeholder="persona@empresa.com" type="email" maxlength="254" autocomplete="off"></div>
+      <div class="field"><label>Nombre (opcional)</label><input id="usr-nombre" placeholder="Juan García" type="text" maxlength="100" autocomplete="off"></div>
+      <div class="field"><label>Rol inicial *</label><select id="usr-rol"><option value="chofer">Chofer</option><option value="oficina">Oficina</option><option value="admin">Administrador</option></select></div>
+      <button id="usr-autorizar" class="btn bp" onclick="autorizarEmailUsuario()"><i class="ti ti-user-check"></i>Autorizar email</button>
+      <div style="font-size:10.5px;color:var(--tx4);margin-top:10px;line-height:1.5">Por seguridad, mantené activada la confirmación de email en Supabase. La contraseña siempre la crea la persona.</div>
     </div>
-    <div id="usr-lista" style="margin-top:14px"></div>
-    <div class="pad"><button class="btn bl" onclick="alert(\'Compartí el código de invitación con la persona. Al registrarse, tu empresa la va a ver acá.\')"><i class="ti ti-user-plus"></i>Agregar usuario</button></div>
+    <div id="usr-pendientes-wrap" style="display:none">
+      <div class="sechead"><span class="t">Autorizaciones pendientes</span><span class="sub" id="usr-pendientes-count"></span></div>
+      <div id="usr-pendientes"></div>
+    </div>
+    <div>
+      <div class="sechead"><span class="t">Usuarios activos</span><span class="sub" id="usr-activos-count"></span></div>
+      <div id="usr-lista"><div class="sub" style="padding:0 20px">Cargando usuarios...</div></div>
+    </div>
   </div>`;
 }
-async function cargarDatosUsuarios(){
-  const {data:codigo,error:codigoError}=await sb.rpc('obtener_codigo_invitacion');
-  const el=document.getElementById('inv-codigo');if(el)el.textContent=codigoError?'No disponible':(codigo||'—');
-  const {data:ulist}=await sb.from('perfiles').select('id,nombre,rol,activo').eq('empresa_id',cu.empresaId).order('nombre');
-  usuariosEmpresa=ulist||[];
-  const lc=document.getElementById('usr-lista');
-  if(lc&&ulist)lc.innerHTML=ulist.map(u=>`<div class="ucard" style="opacity:${u.activo===false?'.55':'1'}"><div class="avatar" style="width:36px;height:36px;font-size:11px">${esc(u.nombre.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase())}</div><div style="flex:1"><div class="un">${esc(u.nombre)}</div><div class="ur">${u.activo===false?'Acceso desactivado':esc(ROL_LBL[u.rol]||u.rol)}</div></div>${cu.rol==='admin'&&u.id!==cu.id?`<select aria-label="Rol" onchange='cambiarRol(${js(u.id)},this.value)' style="max-width:105px;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-input);color:var(--tx);font-size:11px"><option value="chofer" ${u.rol==='chofer'?'selected':''}>Chofer</option><option value="oficina" ${u.rol==='oficina'?'selected':''}>Oficina</option><option value="admin" ${u.rol==='admin'?'selected':''}>Admin</option></select><button class="icon-btn" title="${u.activo===false?'Activar':'Desactivar'}" onclick='toggleUsuario(${js(u.id)},${u.activo===false})'><i class="ti ${u.activo===false?'ti-user-check':'ti-user-off'}"></i></button>`:''}</div>`).join('');
+function opcionesRol(rol){
+  return `<option value="chofer" ${rol==='chofer'?'selected':''}>Chofer</option><option value="oficina" ${rol==='oficina'?'selected':''}>Oficina</option><option value="admin" ${rol==='admin'?'selected':''}>Admin</option>`;
 }
-async function cambiarRol(id,rol){if(!requireOnline())return;const {error}=await sb.rpc('administrar_usuario',{p_usuario_id:id,p_rol:rol,p_activo:null});if(error)alert(error.message);await cargarDatosUsuarios();}
-async function toggleUsuario(id,activar){if(!requireOnline())return;const {error}=await sb.rpc('administrar_usuario',{p_usuario_id:id,p_rol:null,p_activo:activar});if(error)alert(error.message);await cargarDatosUsuarios();}
-async function rotarCodigo(){if(!requireOnline()||!confirm('El código anterior dejará de funcionar. ¿Continuar?'))return;const {error}=await sb.rpc('rotar_codigo_invitacion');if(error)alert(error.message);await cargarDatosUsuarios();}
+function inicialesAcceso(a){
+  const base=(a.nombre||a.email||'?').trim();return base.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+}
+async function cargarDatosUsuarios(){
+  const {data,error}=await sb.rpc('listar_accesos_empresa');
+  const lista=document.getElementById('usr-lista');if(error){if(lista)lista.innerHTML='<div class="sub" style="padding:0 20px;color:var(--red)">No se pudieron cargar los accesos. Verificá que hayas ejecutado la migración v2.5.</div>';return;}
+  accesosEmpresa=data||[];
+  const pendientes=accesosEmpresa.filter(a=>a.estado==='pendiente'),activos=accesosEmpresa.filter(a=>a.estado==='activo');
+  const pw=document.getElementById('usr-pendientes-wrap'),pc=document.getElementById('usr-pendientes-count'),ac=document.getElementById('usr-activos-count');
+  if(pw)pw.style.display=pendientes.length?'block':'none';if(pc)pc.textContent=String(pendientes.length);if(ac)ac.textContent=String(activos.length);
+  const pl=document.getElementById('usr-pendientes');
+  if(pl)pl.innerHTML=pendientes.map(a=>`<div class="ucard"><div class="avatar" style="width:36px;height:36px;font-size:11px;background:var(--bg3);color:var(--or)">${esc(inicialesAcceso(a))}</div><div style="flex:1;min-width:0"><div class="un">${esc(a.nombre||'Nombre pendiente')}</div><div class="ur" style="overflow-wrap:anywhere">${esc(a.email)} · Pendiente</div></div><select aria-label="Rol autorizado" onchange='actualizarAutorizacionPendiente(${js(a.registro_id)},this)' style="max-width:96px;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-input);color:var(--tx);font-size:11px">${opcionesRol(a.rol)}</select><button class="icon-btn" title="Compartir instrucciones" onclick='compartirAccesoAutorizado(${js(a.registro_id)})'><i class="ti ti-share"></i></button><button class="icon-btn" title="Cancelar autorización" onclick='cancelarAutorizacionUsuario(${js(a.registro_id)})'><i class="ti ti-x" style="color:var(--red)"></i></button></div>`).join('');
+  if(lista)lista.innerHTML=activos.map(a=>`<div class="ucard"><div class="avatar" style="width:36px;height:36px;font-size:11px">${esc(inicialesAcceso(a))}</div><div style="flex:1;min-width:0"><div class="un">${esc(a.nombre)}${a.es_actual?' <span style="font-size:10px;color:var(--or)">(Vos)</span>':''}</div><div class="ur" style="overflow-wrap:anywhere">${esc(a.email||'Email no disponible')}</div></div>${a.es_actual?`<span style="font-size:10px;color:var(--tx3);padding:6px 8px;border:1px solid var(--bd);border-radius:999px">${esc(ROL_LBL[a.rol]||a.rol)}</span>`:`<select aria-label="Rol" onchange='cambiarRolUsuario(${js(a.usuario_id)},this)' style="max-width:96px;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-input);color:var(--tx);font-size:11px">${opcionesRol(a.rol)}</select><button class="icon-btn" title="Eliminar acceso" onclick='eliminarAccesoUsuario(${js(a.usuario_id)})'><i class="ti ti-trash" style="color:var(--red)"></i></button>`}</div>`).join('')||empty('ti-users','No hay usuarios activos','Autorizá el primer email para comenzar.');
+}
+async function autorizarEmailUsuario(){
+  if(!requireOnline())return;
+  const email=gv('usr-email').toLowerCase(),nombre=gv('usr-nombre'),rol=gv('usr-rol');
+  if(!emailValido(email)){showErr('usr-error','Ingresá un email válido');return;}
+  if(nombre&&nombre.length<2){showErr('usr-error','El nombre debe tener al menos 2 caracteres');return;}
+  const btn=document.getElementById('usr-autorizar');setBusy(btn,true,'Autorizando...');
+  const {error}=await sb.rpc('autorizar_usuario',{p_email:email,p_nombre:nombre||null,p_rol:rol});
+  setBusy(btn,false,'<i class="ti ti-user-check"></i>Autorizar email');
+  if(error){showErr('usr-error',error.message);return;}
+  document.getElementById('usr-email').value='';document.getElementById('usr-nombre').value='';document.getElementById('usr-rol').value='chofer';
+  showOk('usr-ok',`${email} quedó autorizado como ${ROL_LBL[rol]||rol}.`);await cargarDatosUsuarios();
+}
+async function actualizarAutorizacionPendiente(id,select){
+  const acceso=accesosEmpresa.find(a=>String(a.registro_id)===String(id));if(!acceso)return;
+  const anterior=acceso.rol,nuevo=select.value;
+  const {error}=await sb.rpc('autorizar_usuario',{p_email:acceso.email,p_nombre:acceso.nombre||null,p_rol:nuevo});
+  if(error){select.value=anterior;alert(error.message);return;}await cargarDatosUsuarios();
+}
+async function cambiarRolUsuario(id,select){
+  if(!requireOnline())return;const acceso=accesosEmpresa.find(a=>String(a.usuario_id)===String(id));if(!acceso)return;
+  const anterior=acceso.rol,nuevo=select.value;if(nuevo===anterior)return;
+  if(!confirm(`¿Cambiar a ${acceso.nombre} de ${ROL_LBL[anterior]} a ${ROL_LBL[nuevo]}?`)){select.value=anterior;return;}
+  select.disabled=true;const {data,error}=await sb.rpc('cambiar_rol_usuario',{p_usuario_id:id,p_rol:nuevo});select.disabled=false;
+  if(error){select.value=anterior;alert(error.message);return;}
+  if(Number(data)>0)alert(`${data} remito${Number(data)===1?'':'s'} pendiente${Number(data)===1?' quedó':'s quedaron'} sin chofer. Reasignalo${Number(data)===1?'':'s'} desde Remitos.`);
+  await cargarRemitos();await cargarDatosUsuarios();
+}
+async function eliminarAccesoUsuario(id){
+  if(!requireOnline())return;const acceso=accesosEmpresa.find(a=>String(a.usuario_id)===String(id));if(!acceso)return;
+  if(!confirm(`¿Eliminar el acceso de ${acceso.nombre} (${acceso.email})?\n\nNo podrá volver a entrar. Los remitos cerrados se conservarán y los pendientes que tenga asignados quedarán sin chofer.`))return;
+  const {data,error}=await sb.rpc('eliminar_usuario_empresa',{p_usuario_id:id});if(error){alert(error.message);return;}
+  if(Number(data)>0)alert(`Acceso eliminado. ${data} remito${Number(data)===1?' quedó':'s quedaron'} sin chofer y debe${Number(data)===1?'':'n'} reasignarse.`);
+  await cargarRemitos();await cargarDatosUsuarios();
+}
+async function cancelarAutorizacionUsuario(id){
+  if(!requireOnline())return;const acceso=accesosEmpresa.find(a=>String(a.registro_id)===String(id));if(!acceso)return;
+  if(!confirm(`¿Cancelar la autorización de ${acceso.email}?`))return;
+  const {error}=await sb.rpc('cancelar_autorizacion',{p_autorizacion_id:id});if(error){alert(error.message);return;}await cargarDatosUsuarios();
+}
+function enlaceRegistroAutorizado(){
+  const url=new URL(window.location.origin+window.location.pathname);url.searchParams.set('registro','autorizado');return url.toString();
+}
+async function copiarTextoSeguro(texto){
+  try{await navigator.clipboard.writeText(texto);return true;}catch(e){
+    const area=document.createElement('textarea');area.value=texto;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();
+    try{return document.execCommand('copy');}finally{area.remove();}
+  }
+}
+async function compartirAccesoAutorizado(id){
+  const acceso=accesosEmpresa.find(a=>String(a.registro_id)===String(id));if(!acceso)return;
+  const enlace=enlaceRegistroAutorizado(),texto=`Ya estás autorizado para ingresar a ${cu.empresa} en GoRemitos.\n\nUsá este email: ${acceso.email}\nAbrí: ${enlace}\n\nPodés continuar con Google o crear una contraseña, siempre con ese mismo email.`;
+  if(navigator.share){try{await navigator.share({title:'Acceso a GoRemitos',text:texto,url:enlace});return;}catch(e){if(e?.name==='AbortError')return;}}
+  if(await copiarTextoSeguro(texto))alert('Instrucciones copiadas. Pegalas en WhatsApp o donde quieras enviarlas.');else alert('No se pudieron copiar las instrucciones.');
+}
 
 /* ===== NUEVO ===== */
 function renderNuevo(){
@@ -1364,7 +1461,7 @@ async function bajarPDF(){
       if(rem.tsFirma){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(`Registrado: ${new Date(rem.tsFirma).toLocaleString('es-AR')}`,m,y);y+=5;}
     }
     if(rem.evidenceHash){espacio(18);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GR);doc.text('IDENTIFICADOR DE INTEGRIDAD',m,y);y+=4;textoEnvuelto(rem.evidenceHash,m,W-m*2,6.5,'normal',GR);}
-    const pages=doc.getNumberOfPages();for(let p=1;p<=pages;p++){doc.setPage(p);doc.setDrawColor(...LN);doc.line(m,282,W-m,282);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(`Constancia de entrega con firma electrónica · Página ${p} de ${pages}`,m,288);doc.text('goremitos.app',W-m,288,{align:'right'});}
+    const pages=doc.getNumberOfPages();for(let p=1;p<=pages;p++){doc.setPage(p);doc.setDrawColor(...LN);doc.line(m,282,W-m,282);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(`Constancia de entrega con firma electrónica · Página ${p} de ${pages}`,m,288);doc.text('goremitos.vercel.app',W-m,288,{align:'right'});}
     doc.save(`remito-${String(rem.num||'sin-numero').replace(/[^a-z0-9_-]/gi,'-')}.pdf`);
   }catch(e){console.error(e);alert('No se pudo generar el PDF: '+(e.message||e));}finally{window.__grmPdfBusy=false;document.body.style.cursor='';}
 }
@@ -1377,22 +1474,21 @@ function regTab(t){
   tE.style.background=isEmp?'var(--cta-bg)':'transparent';tE.style.color=isEmp?'var(--cta-tx)':'var(--tx3)';
   tU.style.background=!isEmp?'var(--cta-bg)':'transparent';tU.style.color=!isEmp?'var(--cta-tx)':'var(--tx3)';
 }
-async function doUnirse(){
+async function doRegistroAutorizado(){
   if(!requireOnline())return;
-  const cod=gv('j-codigo').toUpperCase(),nom=gv('j-nombre'),em=gv('j-email'),ps=gv('j-pass');
-  if(!cod||!nom||!em||!ps){showErr('reg-err','Completá todos los campos');return;}
-  if(!/^[0-9A-F]{12}$/.test(cod)){showErr('reg-err','Ingresá el código de invitación de 12 caracteres');return;}
+  const nom=gv('j-nombre'),em=gv('j-email').toLowerCase(),ps=gv('j-pass');
+  if(!nom||!em||!ps){showErr('reg-err','Completá todos los campos');return;}
   if(!emailValido(em)){showErr('reg-err','Ingresá un email válido');return;}
   if(ps.length<8){showErr('reg-err','La contraseña debe tener al menos 8 caracteres');return;}
   const btn=document.querySelector('#form-unirse button.bp');setBusy(btn,true,'Creando cuenta...');
-  const {data:signUp,error:e1}=await sb.auth.signUp({email:em,password:ps,options:{data:{nombre:nom,onboarding_tipo:'unirse',codigo_invitacion:cod}}});
-  if(e1){showErr('reg-err',e1.message);setBusy(btn,false,'Unirme y entrar');return;}
+  const {data:signUp,error:e1}=await sb.auth.signUp({email:em,password:ps,options:{data:{nombre:nom,onboarding_tipo:'autorizado'}}});
+  if(e1){showErr('reg-err',e1.message);setBusy(btn,false,'Crear cuenta y entrar');return;}
   if(!signUp.session){
-    setBusy(btn,false,'Unirme y entrar');alert('Cuenta creada. Confirmá el email y después iniciá sesión. La vinculación se completará automáticamente.');showView('view-login');document.getElementById('l-email').value=em;return;
+    setBusy(btn,false,'Crear cuenta y entrar');alert('Cuenta creada. Confirmá el email y después iniciá sesión. GoRemitos verificará automáticamente la autorización de tu empresa.');showView('view-login');document.getElementById('l-email').value=em;return;
   }
   const {error:e2}=await sb.rpc('completar_onboarding');
-  if(e2){showErr('reg-err',e2.message);setBusy(btn,false,'Unirme y entrar');return;}
-  await cargarSesion();setBusy(btn,false,'Unirme y entrar');
+  if(e2){await sb.auth.signOut();showView('view-register');regTab('autorizado');showErr('reg-err','La cuenta se creó, pero este email todavía no está autorizado. Cuando el administrador lo agregue, iniciá sesión.');setBusy(btn,false,'Crear cuenta y entrar');return;}
+  await cargarSesion();setBusy(btn,false,'Crear cuenta y entrar');
 }
 </script>
 </body>
