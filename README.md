@@ -1,4 +1,30 @@
-# GoRemitos v2.5 — acceso autorizado por email
+# GoRemitos v2.5.2 — identidad de usuarios
+
+Esta versión pide confirmar nombre y apellido antes de activar un acceso nuevo,
+muestra claramente empresa, nombre completo y rol en el encabezado, y permite
+que cada persona corrija su nombre desde el avatar de la esquina superior.
+
+## Actualizar desde v2.5 o v2.5.1
+
+1. Ejecutá `supabase-migration-v2.5.2.sql` completo en Supabase SQL Editor.
+2. Ejecutá `supabase-verificacion-v2.5.2.sql` y confirmá que todos los controles
+   devuelvan `true`.
+3. Publicá el nuevo `index.html` en GitHub/Vercel.
+
+Al instalarse, la migración no modifica empresas, roles, remitos, firmas ni
+autorizaciones. Sólo agrega la función segura que permite a cada usuario cambiar
+su propio nombre.
+
+## Mejora visual heredada de v2.5.1
+
+Esta actualización visual mantiene intacta la base y las funciones de v2.5.
+Los controles críticos ya no dependen de una fuente de íconos: el selector de
+tema, compartir instrucciones, cancelar autorizaciones, eliminar accesos y el
+botón para crear un remito muestran texto o símbolos visibles.
+
+No vuelvas a ejecutar las migraciones v2.2 ni v2.5 si ya estaban instaladas.
+
+## Funciones heredadas de v2.5
 
 Esta versión reemplaza los códigos de invitación por una lista de emails
 autorizados administrada por cada empresa. Conserva la recuperación de
@@ -51,7 +77,7 @@ las políticas verifican su perfil activo en cada operación.
 La eliminación completa de una identidad de `auth.users` requiere una función
 de servidor con una clave secreta. Esa clave nunca debe incluirse en el HTML.
 
-## Orden exacto de instalación
+## Orden exacto de una instalación nueva
 
 1. Hacé un backup del proyecto de Supabase.
 2. Confirmá que ya ejecutaste `supabase-migration-v2.2.sql`. No hace falta
@@ -61,20 +87,24 @@ de servidor con una clave secreta. Esa clave nunca debe incluirse en el HTML.
 4. Ejecutá `supabase-verificacion-v2.5.sql`.
 5. Confirmá que todos los controles de la primera consulta sean `true` y que la
    consulta de permisos peligrosos devuelva cero filas.
-6. En la configuración de Email de Supabase Auth, mantené activada la
+6. Ejecutá `supabase-migration-v2.5.2.sql` y después
+   `supabase-verificacion-v2.5.2.sql`; todos sus controles deben ser `true`.
+7. En la configuración de Email de Supabase Auth, mantené activada la
    confirmación de email. Es necesaria para impedir que alguien registre un
    correo ajeno.
-7. Recién después publicá todos los archivos de esta carpeta en GitHub/Vercel.
+8. Recién después publicá todos los archivos de esta carpeta en GitHub/Vercel.
 
-No publiques primero el `index.html`: la pantalla v2.5 depende de los nuevos
-RPC y tablas creados por la migración.
+Estas instrucciones son sólo para una instalación que todavía no tenía v2.5.
+En ese caso, no publiques primero el `index.html`: la pantalla depende de los
+nuevos RPC y tablas creados por la migración.
 
 Si Supabase muestra un error que empieza con `PRECHECK v2.5`, no publiques los
 archivos todavía: guardá una captura del mensaje para corregir el dato señalado.
 
-El ZIP es sólo para descargar y transportar la versión. Para GitHub hay que
-descomprimirlo y subir los **15 archivos** que contiene, igual que en la versión
-anterior.
+El ZIP es sólo para descargar y transportar la versión. En una instalación
+nueva hay que descomprimirlo y subir los **17 archivos**. Para actualizar desde
+v2.5 o v2.5.1, ejecutá solamente la migración v2.5.2 y reemplazá `index.html`;
+no vuelvas a ejecutar las migraciones anteriores.
 
 ## Qué ocurre con los usuarios existentes
 
@@ -92,7 +122,8 @@ nuevo rol seleccionado.
 - Autorizar un email nuevo como Chofer.
 - Abrir el enlace de registro en una ventana de incógnito.
 - Crear la cuenta con exactamente ese email y confirmar el correo.
-- Verificar que pase de Pendiente a Activo automáticamente.
+- Confirmar nombre y apellido y verificar que pase de Pendiente a Activo.
+- Tocar el avatar, corregir el nombre y comprobar el encabezado completo.
 - Intentar entrar con otro email y confirmar que no obtiene acceso.
 - Cambiar el rol del usuario entre Chofer, Oficina y Administrador.
 - Crear un remito para el chofer y luego eliminar su acceso.

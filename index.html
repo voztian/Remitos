@@ -102,9 +102,13 @@ body{background:var(--page);color:var(--tx)}
 .theme-toggle{height:32px;min-width:64px;padding:0 10px;border-radius:8px;background:var(--bg-input);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--tx2);cursor:pointer;transition:.15s;flex-shrink:0;font-family:'Inter',sans-serif;font-size:10.5px;font-weight:600}
 .theme-toggle:hover{color:var(--tx);border-color:var(--tx3)}
 .theme-toggle:focus-visible,.action-btn:focus-visible,.bn-plus:focus-visible{outline:2px solid var(--or);outline-offset:2px}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--chip-bg);border:1px solid var(--chip-bd);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--tx2);flex-shrink:0;cursor:pointer}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--chip-bg);border:1px solid var(--chip-bd);display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:var(--tx2);flex-shrink:0;cursor:pointer}
+.avatar:hover{border-color:var(--tx3);color:var(--tx)}
+.avatar:focus-visible{outline:2px solid var(--or);outline-offset:2px}
 .subbar{padding:8px 20px;border-bottom:1px solid var(--bd-mid);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--tx3)}
-.subbar .emp{display:flex;align-items:center;gap:6px}
+.subbar .emp{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.emp-company{display:flex;align-items:center;gap:6px;color:var(--tx2);font-weight:600;line-height:1.25}
+.emp-user{color:var(--tx3);line-height:1.25;overflow-wrap:anywhere}
 .subbar .emp i{font-size:12px}
 .subbar .out{color:var(--tx3);cursor:pointer;font-weight:500}
 .subbar .out:hover{color:var(--red)}
@@ -408,13 +412,13 @@ body{background:var(--page);color:var(--tx)}
 <!-- ONBOARDING DESPUÉS DE GOOGLE/OAUTH -->
 <div id="view-onboarding" class="auth" style="display:none">
   <div class="f-logo"><b>Go</b>Remitos</div>
-  <div class="f-sub">Todavía no encontramos tu acceso</div>
+      <div class="f-sub">Confirmá tus datos</div>
   <div class="f-card">
     <div class="err" id="oauth-err"></div>
     <div class="oauth-user"><svg class="google-g" aria-hidden="true"><use href="#google-g-mark"></use></svg><div><div class="verified-title">Sesión verificada</div><div class="mail" id="oauth-email">—</div></div></div>
-    <div class="auth-help">Si pertenecés a una empresa, pedile a un administrador que autorice este mismo email. Después tocá <b>Reintentar acceso</b>.</div>
+    <div class="auth-help">Escribí tu nombre y apellido. Se mostrará junto a la empresa para identificar quién está usando el sistema.</div>
     <div class="field"><label>Nombre completo *</label><input id="o-nombre" placeholder="Juan García" type="text" maxlength="100" autocomplete="name"></div>
-    <button type="button" class="btn bp" id="o-retry" style="margin-bottom:17px" onclick="reintentarAccesoAutorizado()"><i class="ti ti-refresh"></i>Reintentar acceso</button>
+    <button type="button" class="btn bp" id="o-retry" style="margin-bottom:17px" onclick="reintentarAccesoAutorizado()">Confirmar nombre y entrar</button>
     <div class="div-or"><span>o crear una empresa nueva</span></div>
     <div id="o-form-empresa">
       <div class="field"><label>Nombre de la empresa *</label><input id="o-empresa" placeholder="Distribuidora Sol S.R.L." type="text" maxlength="120"></div>
@@ -436,17 +440,32 @@ body{background:var(--page);color:var(--tx)}
         <div class="h-date" id="clock-date">-</div>
       </div>
       <button type="button" class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Cambiar a tema claro" aria-label="Cambiar a tema claro"><span id="theme-label">Claro</span></button>
-      <div class="avatar" id="h-av" title=""></div>
+      <button type="button" class="avatar" id="h-av" title="Abrir mi perfil" aria-label="Abrir mi perfil" onclick="showProfile()"></button>
     </div>
   </div>
   <div class="subbar">
-    <span class="emp"><i class="ti ti-building"></i><span id="empresa-nombre">-</span> · <span id="h-name"></span> (<span id="h-role"></span>)</span>
+    <span class="emp"><span class="emp-company"><i class="ti ti-building"></i><span id="empresa-nombre">-</span></span><span class="emp-user"><span id="h-name"></span> · <span id="h-role"></span></span></span>
     <span class="out" onclick="doLogout()">Salir</span>
   </div>
   <div class="statusbar" id="offline-bar"><i class="ti ti-wifi-off"></i>Sin conexión — reconectate antes de guardar</div>
   <div class="statusbar" id="sync-bar"><i class="ti ti-cloud-check"></i>Conexión restaurada</div>
   <div id="main-content"></div>
   <div class="bnav" id="bnav"></div>
+</div>
+
+<!-- MI PERFIL -->
+<div id="profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:110;padding:20px;overflow-y:auto" onclick="if(event.target===this)closeProfile()">
+  <div style="max-width:420px;margin:54px auto;background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px">
+      <div><div style="font-size:16px;font-weight:650">Mi perfil</div><div style="font-size:11px;color:var(--tx3);margin-top:3px">Datos visibles dentro de GoRemitos</div></div>
+      <button type="button" class="action-btn" onclick="closeProfile()">Cerrar</button>
+    </div>
+    <div class="oauth-user" style="margin-bottom:16px"><div class="avatar" id="profile-avatar" style="width:38px;height:38px;cursor:default"></div><div style="min-width:0"><div class="verified-title" id="profile-company">—</div><div class="mail" id="profile-account">—</div><div class="mail" id="profile-role">—</div></div></div>
+    <div class="err" id="profile-error"></div><div class="okmsg" id="profile-ok"></div>
+    <div class="field"><label>Nombre y apellido *</label><input id="profile-name" placeholder="Juan García" type="text" maxlength="100" autocomplete="name"></div>
+    <div style="font-size:10.5px;color:var(--tx4);line-height:1.5;margin:-2px 0 12px">Este nombre aparecerá arriba de la aplicación y en la lista de usuarios de la empresa.</div>
+    <button type="button" class="btn bp" id="profile-save" onclick="saveProfileName()">Guardar nombre</button>
+  </div>
 </div>
 
 <!-- MODAL PRIVACIDAD -->
@@ -551,6 +570,36 @@ async function cargarRemitos(){
 /* ===== PRIVACIDAD ===== */
 function showPriv(){document.getElementById('priv-modal').style.display='block';}
 function closePriv(){document.getElementById('priv-modal').style.display='none';}
+
+/* ===== MI PERFIL ===== */
+function inicialesNombre(nombre){return String(nombre||'?').trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();}
+function actualizarIdentidadHeader(){
+  if(!cu)return;
+  const av=document.getElementById('h-av');if(av){av.textContent=inicialesNombre(cu.nombre);av.title=`Mi perfil: ${cu.nombre}`;}
+  const pn=document.getElementById('h-name'),pr=document.getElementById('h-role'),pe=document.getElementById('empresa-nombre');
+  if(pn)pn.textContent=cu.nombre;if(pr)pr.textContent=ROL_LBL[cu.rol]||cu.rol;if(pe)pe.textContent=cu.empresa;
+}
+function showProfile(){
+  if(!cu)return;
+  const modal=document.getElementById('profile-modal'),nombre=document.getElementById('profile-name');
+  document.getElementById('profile-avatar').textContent=inicialesNombre(cu.nombre);
+  document.getElementById('profile-company').textContent=cu.empresa;
+  document.getElementById('profile-account').textContent=cu.email;
+  document.getElementById('profile-role').textContent=ROL_LBL[cu.rol]||cu.rol;
+  nombre.value=cu.nombre||'';document.getElementById('profile-error').style.display='none';document.getElementById('profile-ok').style.display='none';
+  modal.style.display='block';setTimeout(()=>nombre.focus(),0);
+}
+function closeProfile(){const modal=document.getElementById('profile-modal');if(modal)modal.style.display='none';}
+async function saveProfileName(){
+  if(!requireOnline()||!cu)return;
+  const nombre=gv('profile-name');if(nombre.length<2){showErr('profile-error','Ingresá tu nombre y apellido');return;}
+  const btn=document.getElementById('profile-save');setBusy(btn,true,'Guardando...');
+  const {data,error}=await sb.rpc('actualizar_mi_nombre',{p_nombre:nombre});
+  if(error){const msg=/actualizar_mi_nombre|schema cache|function/i.test(error.message||'')?'Primero hay que instalar la actualización v2.5.2 en Supabase.':error.message;showErr('profile-error',msg);setBusy(btn,false,'Guardar nombre');return;}
+  cu.nombre=typeof data==='string'&&data.trim()?data.trim():nombre;actualizarIdentidadHeader();
+  document.getElementById('profile-avatar').textContent=inicialesNombre(cu.nombre);showOk('profile-ok','Nombre actualizado correctamente.');
+  await cargarRemitos();if(tabActual==='usuarios')await cargarDatosUsuarios();setBusy(btn,false,'Guardar nombre');
+}
 
 /* ===== THEME ===== */
 function applyTheme(t){
@@ -674,8 +723,6 @@ async function resolverSesionInicial(){
   if(recoveryMode){showPasswordUpdate(session);return;}
   const retorno=sessionStorage.getItem('grm_oauth_return');sessionStorage.removeItem('grm_oauth_return');
   if(retorno&&retorno.startsWith('/')&&retorno!==`${window.location.pathname}${window.location.search}`){window.location.replace(`${window.location.origin}${retorno}`);return;}
-  const {error:onboardingError}=await sb.rpc('completar_onboarding');
-  if(!onboardingError&&await cargarSesion())return;
   if(await cargarSesion())return;
   if(estadoPerfil==='inactivo')return;
   if(estadoPerfil==='error'){showView('view-welcome');showErr('auth-err','No se pudo consultar tu perfil. Intentá nuevamente.');return;}
@@ -694,10 +741,10 @@ async function doOAuthOnboarding(){
 async function reintentarAccesoAutorizado(){
   if(!requireOnline())return;
   const nombre=gv('o-nombre');if(nombre.length<2){showErr('oauth-err','Ingresá tu nombre completo');return;}
-  const btn=document.getElementById('o-retry');setBusy(btn,true,'Comprobando...');
+  const btn=document.getElementById('o-retry');setBusy(btn,true,'Confirmando...');
   const {error}=await sb.rpc('completar_onboarding_interactivo',{p_tipo:'autorizado',p_nombre:nombre,p_empresa_nombre:null,p_empresa_cuit:null,p_codigo:null});
-  if(error){showErr('oauth-err','Este email todavía no está autorizado. Pedile al administrador que lo agregue.');setBusy(btn,false,'<i class="ti ti-refresh"></i>Reintentar acceso');return;}
-  if(!await cargarSesion()){showErr('oauth-err','El acceso fue aceptado, pero no pudo cargarse. Recargá la página.');setBusy(btn,false,'<i class="ti ti-refresh"></i>Reintentar acceso');}
+  if(error){showErr('oauth-err','Este email todavía no está autorizado. Pedile al administrador que lo agregue.');setBusy(btn,false,'Confirmar nombre y entrar');return;}
+  if(!await cargarSesion()){showErr('oauth-err','El acceso fue aceptado, pero no pudo cargarse. Recargá la página.');setBusy(btn,false,'Confirmar nombre y entrar');}
 }
 async function doRegister(){
   if(!requireOnline())return;
@@ -725,13 +772,11 @@ async function doLogin(){
   const btn=document.querySelector('#view-login button.bp');setBusy(btn,true,'Ingresando...');
   const {error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){showErr('log-err','Email o contraseña incorrectos');setBusy(btn,false,'Ingresar');return;}
-  const {error:onboardingError}=await sb.rpc('completar_onboarding');
   const ok=await cargarSesion();
   if(ok)return;
   if(estadoPerfil==='inactivo'){setBusy(btn,false,'Ingresar');return;}
   if(estadoPerfil==='sin_perfil'){
     const {data:{session}}=await sb.auth.getSession();setBusy(btn,false,'Ingresar');mostrarOnboarding(session);
-    if(onboardingError)setTimeout(()=>showErr('oauth-err','Este email todavía no está autorizado por una empresa.'),50);
     return;
   }
   showErr('log-err','No se pudo cargar tu acceso. Intentá nuevamente.');setBusy(btn,false,'Ingresar');
@@ -778,6 +823,7 @@ async function cancelPasswordRecovery(){
 }
 async function doLogout(){
   if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
+  closeProfile();
   sessionStorage.removeItem('grm_oauth_return');await sb.auth.signOut();cu=null;remitos=[];estadoPerfil='sin_sesion';
   if(clockInterval)clearInterval(clockInterval);if(accessCheckInterval)clearInterval(accessCheckInterval);accessCheckInterval=null;showView('view-welcome');
 }
@@ -792,6 +838,7 @@ async function verificarAccesoVigente(){
   const acceso=Array.isArray(data)?data[0]:data;
   if(!acceso||acceso.activo===false){await cerrarPorAccesoEliminado();return;}
   if(String(acceso.empresa_id)!==String(cu.empresaId)||acceso.rol!==cu.rol)window.location.reload();
+  else if(acceso.nombre&&acceso.nombre!==cu.nombre){cu.nombre=acceso.nombre;actualizarIdentidadHeader();}
 }
 function iniciarControlAcceso(){
   if(accessCheckInterval)clearInterval(accessCheckInterval);
@@ -800,12 +847,7 @@ function iniciarControlAcceso(){
 function arrancarApp(){
   limpiarParametroRegistro();
   showView('view-app');
-  const av=document.getElementById('h-av');
-  av.textContent=cu.nombre.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
-  av.title=cu.nombre;
-  document.getElementById('h-name').textContent=cu.nombre.split(' ')[0];
-  document.getElementById('h-role').textContent=ROL_LBL[cu.rol];
-  document.getElementById('empresa-nombre').textContent=cu.empresa;
+  actualizarIdentidadHeader();
   if(!isOnline)document.getElementById('offline-bar').classList.add('show');
   startClock();buildNav();iniciarRealtime();iniciarControlAcceso();
 }
@@ -1009,7 +1051,7 @@ function renderUsuarios(){
       <div style="font-size:11px;color:var(--tx3);margin:4px 0 14px;line-height:1.5">La persona deberá ingresar con este mismo correo. No tendrá que escribir ningún código.</div>
       <div class="err" id="usr-error"></div><div class="okmsg" id="usr-ok"></div>
       <div class="field"><label>Email *</label><input id="usr-email" placeholder="persona@empresa.com" type="email" maxlength="254" autocomplete="off"></div>
-      <div class="field"><label>Nombre (opcional)</label><input id="usr-nombre" placeholder="Juan García" type="text" maxlength="100" autocomplete="off"></div>
+      <div class="field"><label>Nombre de referencia (opcional)</label><input id="usr-nombre" placeholder="Juan García" type="text" maxlength="100" autocomplete="off"></div>
       <div class="field"><label>Rol inicial *</label><select id="usr-rol"><option value="chofer">Chofer</option><option value="oficina">Oficina</option><option value="admin">Administrador</option></select></div>
       <button id="usr-autorizar" class="btn bp" onclick="autorizarEmailUsuario()"><i class="ti ti-user-check"></i>Autorizar email</button>
       <div style="font-size:10.5px;color:var(--tx4);margin-top:10px;line-height:1.5">Por seguridad, mantené activada la confirmación de email en Supabase. La contraseña siempre la crea la persona.</div>
