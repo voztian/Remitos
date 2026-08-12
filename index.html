@@ -99,6 +99,9 @@ body{background:var(--page);color:var(--tx)}
 .icon-btn{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;transition:.15s;flex-shrink:0}
 .icon-btn:hover{color:var(--tx);border-color:var(--tx3)}
 .icon-btn i{font-size:16px}
+.theme-toggle{height:32px;min-width:64px;padding:0 10px;border-radius:8px;background:var(--bg-input);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--tx2);cursor:pointer;transition:.15s;flex-shrink:0;font-family:'Inter',sans-serif;font-size:10.5px;font-weight:600}
+.theme-toggle:hover{color:var(--tx);border-color:var(--tx3)}
+.theme-toggle:focus-visible,.action-btn:focus-visible,.bn-plus:focus-visible{outline:2px solid var(--or);outline-offset:2px}
 .avatar{width:32px;height:32px;border-radius:50%;background:var(--chip-bg);border:1px solid var(--chip-bd);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--tx2);flex-shrink:0;cursor:pointer}
 .subbar{padding:8px 20px;border-bottom:1px solid var(--bd-mid);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--tx3)}
 .subbar .emp{display:flex;align-items:center;gap:6px}
@@ -117,8 +120,9 @@ body{background:var(--page);color:var(--tx)}
 .bn-item i{font-size:19px}
 .bn-item span{font-size:9px;font-weight:600}
 .bn-item.active{color:var(--tx)}
-.bn-plus{width:38px;height:38px;border-radius:10px;background:var(--or);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;flex:none;border:none;margin:0 6px}
-.bn-plus i{font-size:18px}
+.bn-plus{width:38px;height:38px;border-radius:10px;background:var(--or);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;flex:none;border:none;margin:0 6px;font-family:Arial,sans-serif;font-size:26px;font-weight:400;line-height:1}
+.bn-plus:hover{filter:brightness(.94)}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 #main-content{padding-bottom:84px}
 
 /* ===== CONTENT ===== */
@@ -279,6 +283,18 @@ body{background:var(--page);color:var(--tx)}
 .ucard{padding:13px 20px;display:flex;align-items:center;gap:13px;border-bottom:1px solid var(--bd-soft)}
 .ucard .un{font-size:13px;font-weight:500}
 .ucard .ur{font-size:11px;color:var(--tx3);margin-top:2px}
+.ucard-access{align-items:flex-start;flex-wrap:wrap}
+.access-person{display:flex;align-items:center;gap:13px;min-width:0;width:100%}
+.ucard:not(.ucard-access)>.access-person{width:auto;flex:1}
+.access-person-info{flex:1;min-width:0}
+.access-controls{display:flex;align-items:center;gap:8px;width:100%;padding-left:49px}
+.role-select{flex:1;min-width:108px;max-width:150px;padding:8px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-input);color:var(--tx);font-family:'Inter',sans-serif;font-size:11px}
+.action-btn{min-height:34px;padding:0 11px;border-radius:8px;background:var(--bg-input);border:1px solid var(--bd);display:inline-flex;align-items:center;justify-content:center;color:var(--tx2);cursor:pointer;transition:.15s;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;white-space:nowrap}
+.action-btn:hover{color:var(--tx);border-color:var(--tx3)}
+.action-btn.danger{background:transparent;color:var(--red);border-color:var(--red-bd)}
+.action-btn.danger:hover{border-color:var(--red);background:var(--bg-input)}
+@media(max-width:420px){.access-controls{padding-left:0}.action-btn{flex:1}}
+@media(max-width:350px){.access-controls{flex-wrap:wrap}.role-select{width:100%;max-width:none;flex-basis:100%}}
 .oauth-user{display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--bd);border-radius:10px;background:var(--bg-input);margin-bottom:14px}
 .oauth-user .google-g{width:21px;height:21px;flex-basis:21px}
 .oauth-user .verified-title{font-size:13px;font-weight:600;color:var(--tx)}
@@ -419,7 +435,7 @@ body{background:var(--page);color:var(--tx)}
         <div class="h-time tnum" id="clock-time">--:--</div>
         <div class="h-date" id="clock-date">-</div>
       </div>
-      <button type="button" class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Cambiar tema"><i class="ti ti-sun" id="theme-ico"></i></button>
+      <button type="button" class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Cambiar a tema claro" aria-label="Cambiar a tema claro"><span id="theme-label">Claro</span></button>
       <div class="avatar" id="h-av" title=""></div>
     </div>
   </div>
@@ -539,8 +555,10 @@ function closePriv(){document.getElementById('priv-modal').style.display='none';
 /* ===== THEME ===== */
 function applyTheme(t){
   document.body.className=t;
-  const ico=document.getElementById('theme-ico');
-  if(ico)ico.className=t==='dark'?'ti ti-sun':'ti ti-moon';
+  const btn=document.getElementById('theme-btn'),label=document.getElementById('theme-label');
+  const siguiente=t==='dark'?'Claro':'Oscuro';
+  if(label)label.textContent=siguiente;
+  if(btn){btn.title=`Cambiar a tema ${siguiente.toLowerCase()}`;btn.setAttribute('aria-label',btn.title);}
   document.querySelectorAll('meta[name=theme-color]').forEach(meta=>meta.content=t==='dark'?'#08090a':'#ececea');
 }
 function toggleTheme(){
@@ -808,7 +826,7 @@ function buildNav(){
   const items=NAV[cu.rol]||[];
   document.getElementById('bnav').innerHTML=items.map(it=>
     it.plus
-    ?`<button class="bn-plus" onclick="goTab('nuevo')"><i class="ti ti-plus"></i></button>`
+    ?`<button type="button" class="bn-plus" onclick="goTab('nuevo')" aria-label="Crear nuevo remito"><span aria-hidden="true">+</span><span class="sr-only">Nuevo remito</span></button>`
     :`<button class="bn-item" id="bn-${it.id}" onclick="goTab('${it.id}')"><i class="ti ${it.ico}"></i><span>${it.lbl}</span></button>`
   ).join('');
   goTab(HOME[cu.rol]);
@@ -1012,6 +1030,14 @@ function opcionesRol(rol){
 function inicialesAcceso(a){
   const base=(a.nombre||a.email||'?').trim();return base.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
 }
+function tarjetaAutorizacionPendiente(a){
+  return `<div class="ucard ucard-access"><div class="access-person"><div class="avatar" style="width:36px;height:36px;font-size:11px;background:var(--bg3);color:var(--or)">${esc(inicialesAcceso(a))}</div><div class="access-person-info"><div class="un">${esc(a.nombre||'Nombre pendiente')}</div><div class="ur" style="overflow-wrap:anywhere">${esc(a.email)} · Pendiente</div></div></div><div class="access-controls"><select class="role-select" aria-label="Rol autorizado" onchange='actualizarAutorizacionPendiente(${js(a.registro_id)},this)'>${opcionesRol(a.rol)}</select><button type="button" class="action-btn" onclick='compartirAccesoAutorizado(${js(a.registro_id)})'>Compartir</button><button type="button" class="action-btn danger" onclick='cancelarAutorizacionUsuario(${js(a.registro_id)})'>Cancelar</button></div></div>`;
+}
+function tarjetaUsuarioActivo(a){
+  const persona=`<div class="access-person"><div class="avatar" style="width:36px;height:36px;font-size:11px">${esc(inicialesAcceso(a))}</div><div class="access-person-info"><div class="un">${esc(a.nombre)}${a.es_actual?' <span style="font-size:10px;color:var(--or)">(Vos)</span>':''}</div><div class="ur" style="overflow-wrap:anywhere">${esc(a.email||'Email no disponible')}</div></div></div>`;
+  if(a.es_actual)return `<div class="ucard">${persona}<span style="font-size:10px;color:var(--tx3);padding:6px 8px;border:1px solid var(--bd);border-radius:999px">${esc(ROL_LBL[a.rol]||a.rol)}</span></div>`;
+  return `<div class="ucard ucard-access">${persona}<div class="access-controls"><select class="role-select" aria-label="Rol" onchange='cambiarRolUsuario(${js(a.usuario_id)},this)'>${opcionesRol(a.rol)}</select><button type="button" class="action-btn danger" onclick='eliminarAccesoUsuario(${js(a.usuario_id)})'>Eliminar acceso</button></div></div>`;
+}
 async function cargarDatosUsuarios(){
   const {data,error}=await sb.rpc('listar_accesos_empresa');
   const lista=document.getElementById('usr-lista');if(error){if(lista)lista.innerHTML='<div class="sub" style="padding:0 20px;color:var(--red)">No se pudieron cargar los accesos. Verificá que hayas ejecutado la migración v2.5.</div>';return;}
@@ -1020,8 +1046,8 @@ async function cargarDatosUsuarios(){
   const pw=document.getElementById('usr-pendientes-wrap'),pc=document.getElementById('usr-pendientes-count'),ac=document.getElementById('usr-activos-count');
   if(pw)pw.style.display=pendientes.length?'block':'none';if(pc)pc.textContent=String(pendientes.length);if(ac)ac.textContent=String(activos.length);
   const pl=document.getElementById('usr-pendientes');
-  if(pl)pl.innerHTML=pendientes.map(a=>`<div class="ucard"><div class="avatar" style="width:36px;height:36px;font-size:11px;background:var(--bg3);color:var(--or)">${esc(inicialesAcceso(a))}</div><div style="flex:1;min-width:0"><div class="un">${esc(a.nombre||'Nombre pendiente')}</div><div class="ur" style="overflow-wrap:anywhere">${esc(a.email)} · Pendiente</div></div><select aria-label="Rol autorizado" onchange='actualizarAutorizacionPendiente(${js(a.registro_id)},this)' style="max-width:96px;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-input);color:var(--tx);font-size:11px">${opcionesRol(a.rol)}</select><button class="icon-btn" title="Compartir instrucciones" onclick='compartirAccesoAutorizado(${js(a.registro_id)})'><i class="ti ti-share"></i></button><button class="icon-btn" title="Cancelar autorización" onclick='cancelarAutorizacionUsuario(${js(a.registro_id)})'><i class="ti ti-x" style="color:var(--red)"></i></button></div>`).join('');
-  if(lista)lista.innerHTML=activos.map(a=>`<div class="ucard"><div class="avatar" style="width:36px;height:36px;font-size:11px">${esc(inicialesAcceso(a))}</div><div style="flex:1;min-width:0"><div class="un">${esc(a.nombre)}${a.es_actual?' <span style="font-size:10px;color:var(--or)">(Vos)</span>':''}</div><div class="ur" style="overflow-wrap:anywhere">${esc(a.email||'Email no disponible')}</div></div>${a.es_actual?`<span style="font-size:10px;color:var(--tx3);padding:6px 8px;border:1px solid var(--bd);border-radius:999px">${esc(ROL_LBL[a.rol]||a.rol)}</span>`:`<select aria-label="Rol" onchange='cambiarRolUsuario(${js(a.usuario_id)},this)' style="max-width:96px;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-input);color:var(--tx);font-size:11px">${opcionesRol(a.rol)}</select><button class="icon-btn" title="Eliminar acceso" onclick='eliminarAccesoUsuario(${js(a.usuario_id)})'><i class="ti ti-trash" style="color:var(--red)"></i></button>`}</div>`).join('')||empty('ti-users','No hay usuarios activos','Autorizá el primer email para comenzar.');
+  if(pl)pl.innerHTML=pendientes.map(tarjetaAutorizacionPendiente).join('');
+  if(lista)lista.innerHTML=activos.map(tarjetaUsuarioActivo).join('')||empty('ti-users','No hay usuarios activos','Autorizá el primer email para comenzar.');
 }
 async function autorizarEmailUsuario(){
   if(!requireOnline())return;
