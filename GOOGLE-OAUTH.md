@@ -1,68 +1,70 @@
-# Activar el acceso con Google
+# Google OAuth de GoRemitos v2.6
 
-La aplicación ya contiene el botón y el flujo de alta. Falta conectar las
-credenciales privadas entre Google Cloud y Supabase. El proyecto Supabase de
-esta entrega es `ospgkovvqqaaebzswngv`.
+Dominio público principal: `https://goremitos.vercel.app`
 
-## 1. Configurar Google Cloud
+Proyecto Supabase: `ospgkovvqqaaebzswngv`
 
-1. Entrá a **Google Cloud Console > Google Auth Platform** y elegí o creá el
-   proyecto de GoRemitos.
-2. Completá Branding y Audience. Si la app está en modo de prueba, agregá como
-   usuarios de prueba todas las cuentas que vayan a participar del piloto.
-3. En Data Access usá solamente los scopes básicos `openid`,
-   `.../auth/userinfo.email` y `.../auth/userinfo.profile`.
-4. Creá un cliente OAuth de tipo **Web application**.
-5. En **Authorized JavaScript origins**, cargá el origen público exacto:
+## 1. Google Cloud
+
+1. Entrá a **Google Cloud Console > Google Auth Platform** y elegí el proyecto
+   correcto de GoRemitos.
+2. En **Información de la marca**, completá nombre de la app, email de soporte,
+   dominio principal y contacto del desarrollador.
+3. Publicá la aplicación para audiencia **Externa** antes de invitar clientes.
+   Mientras siga en prueba, agregá expresamente todas las cuentas de prueba.
+4. En **Acceso a los datos**, solicitá solamente `openid`, email y perfil.
+5. En **Clientes**, creá o editá un cliente **Aplicación web**.
+6. En **Orígenes autorizados de JavaScript**, dejá:
 
    `https://goremitos.vercel.app`
-6. En **Authorized redirect URIs**, cargá exactamente:
+
+7. En **URIs de redireccionamiento autorizados**, dejá exactamente:
 
    `https://ospgkovvqqaaebzswngv.supabase.co/auth/v1/callback`
 
-7. Copiá el Client ID y el Client Secret. No los pegues en `index.html`.
+8. Guardá y copiá el Client ID y Client Secret al administrador de contraseñas.
+   No guardes capturas con el secreto ni lo subas a GitHub.
 
-## 2. Habilitar Google en Supabase
+## 2. Supabase
 
-1. Entrá a **Supabase Dashboard > Authentication > Providers > Google**.
-2. Activá el proveedor y pegá allí el Client ID y el Client Secret.
-3. En **Authentication > URL Configuration**, definí como Site URL:
+1. Abrí **Authentication > Sign In / Providers > Google**.
+2. Activá **Enable Sign in with Google**.
+3. En **Client IDs** pegá el Client ID terminado en
+   `.apps.googleusercontent.com`, no un email ni una clave API.
+4. En **Client Secret** pegá el secreto del mismo cliente OAuth.
+5. Dejá desactivados **Skip nonce checks** y **Allow users without an email**.
+6. Guardá.
+7. En **Authentication > URL Configuration** usá:
 
-   `https://goremitos.vercel.app`
+   Site URL: `https://goremitos.vercel.app`
 
-4. En Redirect URLs conservá estas dos entradas:
+   Redirect URL: `https://goremitos.vercel.app/**`
 
-   `https://goremitos.vercel.app`
+No agregues URLs `file:///`, `localhost` ni previews de Vercel al entorno de
+producción. Para pruebas aisladas usá otro proyecto o retiralas al terminar.
 
-   `https://goremitos.vercel.app/**`
-5. Para una prueba local podés agregar temporalmente `http://localhost:8000/**`.
-   No uses comodines para la URL definitiva de producción.
+## 3. Prueba obligatoria
 
-La aplicación envía el retorno a su origen y ruta actuales. Además conserva en
-la misma pestaña el enlace QR que el usuario intentaba abrir antes de ingresar.
+Usá dos perfiles de Chrome diferentes o una ventana incógnita sólo para evitar
+reutilizar la sesión del administrador:
 
-## 3. Prueba de aceptación
+1. Desde GoRemitos, autorizá un email de prueba como Chofer.
+2. Cerrá sesión.
+3. Entrá con Google usando exactamente ese correo.
+4. Google debe permitir elegir cuenta y luego GoRemitos debe pedir nombre.
+5. Confirmá que figure en **Usuarios activos** con empresa y rol correctos.
+6. Eliminá su acceso y comprobá que ya no pueda leer datos ni volver a entrar.
+7. Probá una cuenta no autorizada: debe quedar fuera de toda empresa.
 
-- Autorizar primero el email de prueba desde **Usuarios** en GoRemitos.
-- Ingresar con Google usando exactamente ese email: debe aceptar la
-  autorización sin pedir ningún código.
-- Ingresar con una cuenta Google no autorizada: no debe mostrar datos de ninguna
-  empresa; debe permitir reintentar después de que un administrador la agregue
-  o crear una empresa nueva.
-- Volver a ingresar con esa cuenta: debe abrir la app directamente.
-- Ingresar con Google usando el mismo email verificado de una cuenta existente:
-  debe conservar el mismo usuario y sus permisos.
-- Probar el enlace QR estando desconectado: después de Google debe volver al
-  remito solicitado.
-- Cerrar sesión y comprobar que email/contraseña siga disponible.
+## 4. Señales de error
 
-## Seguridad
+- `Unsupported provider`: Google sigue desactivado en Supabase.
+- `redirect_uri_mismatch`: la URI de callback de Supabase no coincide
+  exactamente con Google Cloud.
+- Vuelve a `localhost`: Site URL o Redirect URLs de Supabase siguen apuntando a
+  desarrollo.
+- Entra con la cuenta equivocada: cerrá la sesión Google o usá otro perfil; la
+  app solicita `select_account`, pero Google puede mantener varias sesiones.
 
-- El Client Secret sólo se guarda en la configuración privada de Supabase.
-- Usá URLs exactas en producción y HTTPS.
-- No solicites acceso a Gmail, Drive ni contactos: para iniciar sesión sólo se
-  necesitan identidad básica, email y perfil.
-- Si cambiás de dominio, actualizá tanto Google Cloud como Supabase antes de
-  publicar.
-- Una autorización sólo se acepta cuando Google/Supabase entrega un email
-  confirmado que coincide exactamente con el cargado por el administrador.
+Referencia oficial:
+https://supabase.com/docs/guides/auth/social-login/auth-google

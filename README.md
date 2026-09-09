@@ -1,157 +1,132 @@
-# GoRemitos v2.5.2 — identidad de usuarios
+# GoRemitos v2.8 — escritorio adaptable
 
-Esta versión pide confirmar nombre y apellido antes de activar un acceso nuevo,
-muestra claramente empresa, nombre completo y rol en el encabezado, y permite
-que cada persona corrija su nombre desde el avatar de la esquina superior.
+Esta versión conserva completo el circuito seguro de v2.7 y agrega una interfaz realmente adaptada a computadoras, sin quitar la experiencia móvil:
 
-## Actualizar desde v2.5 o v2.5.1
+- En pantallas de 900 px o más aparece un menú lateral con textos claros.
+- El dashboard usa el ancho disponible y separa indicadores de actividad reciente.
+- Remitos, usuarios y formularios se presentan en paneles amplios y ordenados.
+- En celulares continúa la navegación inferior conocida.
+- El cambio es solamente de interfaz: no modifica tablas, permisos, usuarios ni remitos.
 
-1. Ejecutá `supabase-migration-v2.5.2.sql` completo en Supabase SQL Editor.
-2. Ejecutá `supabase-verificacion-v2.5.2.sql` y confirmá que todos los controles
-   devuelvan `true`.
-3. Publicá el nuevo `index.html` en GitHub/Vercel.
+El circuito operativo sigue siendo:
 
-Al instalarse, la migración no modifica empresas, roles, remitos, firmas ni
-autorizaciones. Sólo agrega la función segura que permite a cada usuario cambiar
-su propio nombre.
+1. La empresa emite su remito en el sistema que ya utiliza.
+2. Administración u oficina adjunta ese remito a GoRemitos en PDF o imagen.
+3. Asigna la entrega a un chofer.
+4. El chofer inicia el viaje; recién entonces el estado cambia de **Programado** a **En camino**.
+5. El destinatario puede consultar el avance mediante un enlace limitado.
+6. En destino, el chofer revisa la mercadería y registra conformidad, rechazo o diferencias, receptor, firma y evidencias.
+7. GoRemitos cierra una constancia inmutable vinculada al hash del remito original.
 
-## Mejora visual heredada de v2.5.1
+## Qué es y qué no es
 
-Esta actualización visual mantiene intacta la base y las funciones de v2.5.
-Los controles críticos ya no dependen de una fuente de íconos: el selector de
-tema, compartir instrucciones, cancelar autorizaciones, eliminar accesos y el
-botón para crear un remito muestran texto o símbolos visibles.
+GoRemitos v2.8 es una plataforma de seguimiento y constancia digital de entregas asociada a un remito externo.
 
-No vuelvas a ejecutar las migraciones v2.2 ni v2.5 si ya estaban instaladas.
+- No genera numeración fiscal.
+- No solicita CAI/CAE.
+- No imprime formularios fiscales.
+- No reemplaza el remito que la empresa debe emitir según su actividad.
+- Sí conserva una copia privada, registra el viaje y produce evidencia de entrega.
 
-## Funciones heredadas de v2.5
+El archivo descargable que genera GoRemitos dice expresamente **“Constancia digital de seguimiento y entrega”**. No debe presentarse como Remito R ni como factura.
 
-Esta versión reemplaza los códigos de invitación por una lista de emails
-autorizados administrada por cada empresa. Conserva la recuperación de
-contraseña de v2.3 y todas las mejoras operativas de v2.2.
+## Actualizar desde v2.7
 
-## Cómo funciona
+**No tenés que entrar a Supabase ni ejecutar SQL.** La base segura de v2.7 se mantiene sin cambios.
 
-1. Un administrador abre **Usuarios**.
-2. Carga el email, el nombre opcional y el rol inicial.
-3. La autorización queda como **Pendiente**.
-4. La persona entra con Google o crea una cuenta usando exactamente ese email.
-5. Supabase compara el email confirmado de la sesión con la autorización.
-6. Si coincide, crea o reactiva el perfil en la empresa y aplica el rol elegido.
+1. Descomprimí el ZIP.
+2. En GitHub, abrí el mismo repositorio `voztian/Remitos` y elegí **Add file → Upload files**.
+3. Subí el contenido descomprimido a la raíz, reemplazando los archivos anteriores. No subas la carpeta contenedora ni el ZIP.
+4. Mantené seleccionada la opción **Commit directly to the main branch**.
+5. Usá como mensaje: `GoRemitos v2.8 - interfaz para escritorio`.
+6. Tocá **Commit changes**.
+7. Esperá a que Vercel muestre el deployment como **Ready / Production / Current**.
+8. Abrí `goremitos.vercel.app` en una pestaña nueva. Si aparece la versión anterior, usá `Ctrl + F5` una vez.
 
-El usuario nunca escribe un código. El administrador puede compartir unas
-instrucciones listas para WhatsApp, pero el enlace no contiene el email ni otro
-dato personal.
+Los archivos SQL v2.7 siguen incluidos sólo como respaldo y trazabilidad. No los vuelvas a ejecutar para instalar v2.8.
 
-## Cambios de v2.5
+## Qué comprobar después de publicar
 
-- Autorizaciones por email normalizado y único.
-- Roles iniciales Administrador, Oficina o Chofer.
-- Estados Pendiente y Activo en la pantalla Usuarios.
-- Cambio de rol para cualquier otro usuario activo.
-- Cancelación de autorizaciones todavía no utilizadas.
-- Eliminación del acceso de otros usuarios, incluidos otros administradores.
-- Protección contra eliminarse o cambiarse el propio rol.
-- Protección para que la empresa nunca quede sin administradores.
-- Remitos cerrados e historial preservados al eliminar un usuario.
-- Remitos pendientes desasignados automáticamente si se elimina o cambia de
-  rol al chofer responsable.
-- Registro de quién autorizó, aceptó, cambió o eliminó cada acceso.
-- Comprobación periódica del acceso: un usuario eliminado pierde permisos en la
-  base inmediatamente y la interfaz cierra su sesión al volver a enfocarse o en
-  un máximo aproximado de 30 segundos.
-- Email de otros usuarios visible sólo mediante el RPC reservado a admins.
-- Códigos de invitación y RPC administrativos anteriores bloqueados.
-- Alta por Google y por email compatible con el nuevo sistema.
-- Recuperación de contraseña v2.3 conservada.
-- Dominio del pie de los PDF corregido a `goremitos.vercel.app`.
+Hacé una prueba breve con datos de prueba:
 
-## Importante sobre “Eliminar usuario”
+1. En una computadora, confirmá que aparece el menú lateral y que abre Inicio, Remitos, Usuarios e Historial.
+2. Tocá **Nuevo remito** y comprobá que el formulario sea amplio y legible.
+3. Cambiá entre tema claro y oscuro.
+4. Achicá la ventana por debajo de 900 px: debe volver automáticamente al diseño móvil con menú inferior.
+5. En el celular, confirmá que iniciar con Google y navegar funciona igual que antes.
 
-La acción elimina el acceso a la empresa, no destruye físicamente la identidad
-de Supabase. Esto es intencional: mantiene la trazabilidad de firmas y remitos,
-permite volver a autorizar el mismo email y evita exponer una clave secreta en
-el navegador. El usuario eliminado no puede consultar ni modificar datos porque
-las políticas verifican su perfil activo en cada operación.
+La lista específica de pantalla está en `PRUEBAS-ESCRITORIO-v2.8.md`. La aceptación funcional completa continúa en `PRUEBAS-PILOTO-v2.7.md` porque la lógica de datos no cambió.
 
-La eliminación completa de una identidad de `auth.users` requiere una función
-de servidor con una clave secreta. Esa clave nunca debe incluirse en el HTML.
+## Prueba mínima antes de un cliente
 
-## Orden exacto de una instalación nueva
+Usá cuentas y documentos de prueba, sin datos reales:
 
-1. Hacé un backup del proyecto de Supabase.
-2. Confirmá que ya ejecutaste `supabase-migration-v2.2.sql`. No hace falta
-   volver a ejecutarlo si la v2.3 ya estaba funcionando.
-3. Abrí `supabase-migration-v2.5.sql` y ejecutalo completo en
-   **Supabase > SQL Editor**.
-4. Ejecutá `supabase-verificacion-v2.5.sql`.
-5. Confirmá que todos los controles de la primera consulta sean `true` y que la
-   consulta de permisos peligrosos devuelva cero filas.
-6. Ejecutá `supabase-migration-v2.5.2.sql` y después
-   `supabase-verificacion-v2.5.2.sql`; todos sus controles deben ser `true`.
-7. En la configuración de Email de Supabase Auth, mantené activada la
-   confirmación de email. Es necesaria para impedir que alguien registre un
-   correo ajeno.
-8. Recién después publicá todos los archivos de esta carpeta en GitHub/Vercel.
+1. Administrador: programá una entrega y adjuntá un PDF pequeño.
+2. Abrí el enlace de seguimiento en incógnito: debe mostrar **Programado** y no debe pedir cuenta.
+3. Chofer: abrí la entrega; todavía no debe permitir firmarla.
+4. Tocá **Iniciar viaje**.
+5. Volvé al enlace incógnito: debe mostrar **En camino** y la hora de salida.
+6. Chofer: revisá todos los ítems y cerrá una entrega de prueba.
+7. El enlace debe mostrar **Entregado**.
+8. Administrador: comprobá que puede abrir el remito original, la constancia y la trazabilidad.
+9. Confirmá que el enlace público no muestra domicilio, teléfono, ítems, documento, DNI, firma ni fotos.
 
-Estas instrucciones son sólo para una instalación que todavía no tenía v2.5.
-En ese caso, no publiques primero el `index.html`: la pantalla depende de los
-nuevos RPC y tablas creados por la migración.
+La ventana incógnita se usa únicamente para comprobar que el seguimiento no
+depende de la sesión del administrador. El destinatario puede abrir el enlace
+normalmente en Chrome, Safari u otro navegador compatible.
 
-Si Supabase muestra un error que empieza con `PRECHECK v2.5`, no publiques los
-archivos todavía: guardá una captura del mensaje para corregir el dato señalado.
-
-El ZIP es sólo para descargar y transportar la versión. En una instalación
-nueva hay que descomprimirlo y subir los **17 archivos**. Para actualizar desde
-v2.5 o v2.5.1, ejecutá solamente la migración v2.5.2 y reemplazá `index.html`;
-no vuelvas a ejecutar las migraciones anteriores.
-
-## Qué ocurre con los usuarios existentes
-
-La migración copia sus emails desde `auth.users`, conserva empresa, nombre y
-rol, y crea autorizaciones ya aceptadas. Nadie debería perder acceso por la
-actualización.
-
-Si un administrador elimina a una persona y luego vuelve a autorizar el mismo
-email, esa persona podrá iniciar sesión nuevamente y quedará vinculada con el
-nuevo rol seleccionado.
-
-## Verificación funcional recomendada
-
-- Comprobar que el administrador actual siga entrando.
-- Autorizar un email nuevo como Chofer.
-- Abrir el enlace de registro en una ventana de incógnito.
-- Crear la cuenta con exactamente ese email y confirmar el correo.
-- Confirmar nombre y apellido y verificar que pase de Pendiente a Activo.
-- Tocar el avatar, corregir el nombre y comprobar el encabezado completo.
-- Intentar entrar con otro email y confirmar que no obtiene acceso.
-- Cambiar el rol del usuario entre Chofer, Oficina y Administrador.
-- Crear un remito para el chofer y luego eliminar su acceso.
-- Confirmar que el remito pendiente quede como “Sin asignar”.
-- Confirmar que los remitos cerrados y sus firmas sigan visibles para Admin.
-- Volver a autorizar el email eliminado y comprobar la reactivación.
-- Probar recuperación de contraseña y tema claro/oscuro.
+La lista completa está en `PRUEBAS-PILOTO-v2.7.md`.
 
 ## Seguridad aplicada
 
-- El navegador usa solamente la clave pública de Supabase.
-- La empresa y el rol se asignan dentro de funciones `security definer` con
-  `search_path` restringido.
-- La autorización se resuelve con el email confirmado de `auth.users`, no con
-  `user_metadata` editable por el usuario.
-- Las tablas de autorizaciones no admiten lectura ni escritura directa desde
-  `anon` o `authenticated`.
-- RLS sigue aislando empresas, roles, remitos y evidencias privadas.
-- Los emails se normalizan en minúsculas y sólo puede existir una autorización
-  activa por email.
-- Las operaciones simultáneas sobre el mismo email se serializan para evitar
-  duplicados o altas en dos empresas.
+- El remito original se guarda en un bucket privado separado.
+- Sólo administración/oficina de la empresa pueden subirlo.
+- Sólo administración/oficina de la empresa y el chofer asignado pueden leerlo.
+- El archivo admite PDF, JPG, PNG o WebP y un máximo de 10 MB.
+- El navegador comprueba extensión y firma interna del archivo; cambiarle el nombre a un ejecutable no alcanza para subirlo.
+- Se calcula SHA-256 antes de subirlo y se vuelve a verificar al descargarlo.
+- Un mismo objeto no puede asociarse a dos remitos.
+- Una entrega iniciada ya no se puede editar ni eliminar.
+- Un chofer con una entrega en camino no puede ser eliminado ni perder su rol
+  hasta cerrar el viaje; así la entrega no queda sin una cuenta habilitada.
+- Los RPC de escritura v2.6 quedan revocados para impedir que se saltee el documento o el inicio del viaje.
+- El cierre incluye el hash y la metadata del documento original en el snapshot firmado.
+- El seguimiento público usa un UUID aleatorio y devuelve un conjunto mínimo de campos.
+- Los enlaces nuevos guardan ese UUID en el fragmento `#seguimiento=`, para que el hosting no reciba el token; los enlaces anteriores siguen abriendo.
+- Evidencias, firma y documentos se entregan a usuarios internos mediante URL firmada de corta duración.
+- RLS continúa aislando empresas y roles.
 
-## Pendientes fuera de esta versión
+## Operación y límites
 
-El envío automático de emails de invitación no está incluido: Supabase exige
-hacerlo desde un servidor confiable con credenciales secretas. La aplicación
-permite copiar o compartir instrucciones sin exponer esas credenciales.
+- No existe sincronización offline. Sin conexión, no se puede iniciar ni cerrar una entrega.
+- El modo **Manual** sirve como contingencia: se conserva el papel firmado y se carga una foto al recuperar conexión.
+- El enlace público es un enlace portador: quien lo recibe puede ver el estado mínimo. Debe compartirse sólo con las personas involucradas.
+- El hash calculado en el navegador permite detectar cambios posteriores, pero no sustituye una firma digital certificada ni una certificación notarial.
+- La captura de firma es firma electrónica, no firma digital certificada.
+- La validación de formato no es un antivirus. Durante el piloto, adjuntá únicamente documentos exportados por sistemas y equipos confiables; el análisis antimalware del lado servidor queda fuera de esta etapa.
+- Para uso con datos reales deben completarse los datos legales, la política de conservación, SMTP, OAuth, CAPTCHA y la rutina de backups ya previstas en v2.6.
 
-El modo offline real tampoco está incluido. Si se pierde la señal, GoRemitos
-bloquea el guardado y conserva el formulario mientras la pestaña siga abierta.
+Al 2 de septiembre de 2026, Supabase Free ofrece 1 GB de Storage, OAuth social, SMTP personalizado, RLS y Realtime, pero puede pausar proyectos tras una semana de inactividad y no incluye backups automáticos. Pro parte de USD 25 por mes, evita esas pausas e incluye backups diarios de base por 7 días. Fuente: https://supabase.com/pricing.
+
+La aplicación permite elegir **Supabase Pro** o **Piloto controlado en Free**. Free exige aceptar expresamente ese riesgo y marcar como verificados los backups externos tanto de base como de Storage. La elección del plan responde a continuidad y recuperación; no cambia la naturaleza fiscal del documento.
+
+## Archivos principales
+
+- `index.html`: aplicación v2.8 adaptable a escritorio y celular.
+- `supabase-migration-v2.7.sql`: actualización transaccional desde v2.6.
+- `supabase-finalizar-v2.7.sql`: bloqueo de métodos anteriores después del deployment.
+- `supabase-reversion-emergencia-v2.7.sql`: retorno no destructivo a v2.6 si no hay viajes en curso.
+- `supabase-verificacion-v2.7.sql`: controles posteriores.
+- `PRUEBAS-PILOTO-v2.7.md`: aceptación antes de habilitar clientes.
+- `RESULTADO-VALIDACION-v2.7.md`: controles superados, riesgos residuales y condición exacta de salida.
+- `OPERACION-Y-BACKUPS-v2.7.md`: rutina de continuidad para la base y los dos buckets privados.
+- `CAMBIOS-v2.7.md`: detalle funcional y técnico.
+- `ALCANCE-ETAPA-1-v2.7.md`: límite de producto de esta etapa.
+- `PRIVACIDAD-Y-CONTRATOS-v2.7.md`: puntos que deben acordarse con cada cliente antes del piloto.
+- `privacidad.html`: política actualizada.
+- `vercel.json` y `_headers`: encabezados de seguridad y caché.
+- `PRUEBAS-ESCRITORIO-v2.8.md`: aceptación visual y responsive de esta versión.
+- `CAMBIOS-v2.8.md`: detalle de la actualización de interfaz.
+- `tests/verificar-paquete.mjs`: validación local integral; también ejecuta las pruebas de lógica de v2.7.
+
+Los archivos de migraciones anteriores se conservan únicamente para una instalación nueva y para trazabilidad. Una instalación que ya funciona con v2.7 no requiere ningún cambio en Supabase para pasar a v2.8.
