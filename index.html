@@ -1026,7 +1026,8 @@ async function saveProfileName(){
 
 /* ===== THEME ===== */
 function applyTheme(t){
-  document.body.className=t;
+  document.body.classList.toggle('dark',t==='dark');
+  document.body.classList.toggle('light',t==='light');
   const btn=document.getElementById('theme-btn'),label=document.getElementById('theme-label');
   const siguiente=t==='dark'?'Claro':'Oscuro';
   if(label)label.textContent=siguiente;
@@ -1034,7 +1035,7 @@ function applyTheme(t){
   document.querySelectorAll('meta[name=theme-color]').forEach(meta=>meta.content=t==='dark'?'#08090a':'#ececea');
 }
 function toggleTheme(){
-  const t=document.body.className==='dark'?'light':'dark';
+  const t=document.body.classList.contains('dark')?'light':'dark';
   localStorage.setItem('grm_theme',t);applyTheme(t);
 }
 applyTheme(localStorage.getItem('grm_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'));
