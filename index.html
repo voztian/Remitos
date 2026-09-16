@@ -657,7 +657,7 @@ body.modal-open{overflow:hidden}
 <script src="/qrcode-1.0.0.min.js"></script>
 <script>
 /* ===== SUPABASE ===== */
-const APP_VERSION='2.9.0';
+const APP_VERSION='2.9.1';
 const SUPABASE_URL='https://ospgkovvqqaaebzswngv.supabase.co';
 const SUPABASE_KEY='sb_publishable_Y66zEF0bcef_BRtlbJYIDg_9QrqLiuu';
 const RECOVERY_RETURN=(()=>{const h=new URLSearchParams(window.location.hash.replace(/^#/,'')),q=new URLSearchParams(window.location.search);return h.get('type')==='recovery'||q.get('type')==='recovery';})();
@@ -934,7 +934,7 @@ async function cargarSesion(){
     plataformaListaPiloto:perfil.plataforma_lista_piloto===true
   };
   registroEmailHabilitado=cu.registroEmailHabilitado;
-  await Promise.all([cargarRemitos({reset:true}),cargarResumenRemitos()]);
+  await refrescarDatos();
   estadoPerfil='ok';
   arrancarApp();
   return true;
@@ -962,20 +962,36 @@ async function cargarRemitos({reset=true}={}){
   totalRemitosDisponibles=Number(count??remitos.length);hayMasRemitos=remitos.length<totalRemitosDisponibles;cargaRemitosError=null;
   return true;
 }
+function resumenLocalRemitos(){
+  return {
+    total:totalRemitosDisponibles,
+    entregados:remitos.filter(r=>['Firmado','Disconforme','Rechazado'].includes(r.estado)).length,
+    programados:remitos.filter(r=>r.estado==='Pendiente'&&!r.salidaAt).length,
+    en_camino:remitos.filter(r=>r.estado==='Pendiente'&&r.salidaAt).length,
+    con_problemas:remitos.filter(r=>['Disconforme','Rechazado'].includes(r.estado)).length,
+    manuales:remitos.filter(r=>r.estado==='Manual').length
+  };
+}
 async function cargarResumenRemitos(){
+  if(totalRemitosDisponibles<=remitos.length){resumenRemitos=resumenLocalRemitos();return true;}
   const {data,error}=await sb.rpc('resumen_remitos_v27');
   if(error){console.error('resumen-remitos',error);registrarError('resumen_remitos',error);return false;}
   const r=Array.isArray(data)?data[0]:data;resumenRemitos=r||{};return true;
 }
-async function refrescarDatos(){return Promise.all([cargarRemitos({reset:true}),cargarResumenRemitos()]);}
+async function refrescarDatos(){
+  const ok=await cargarRemitos({reset:true});
+  if(!ok)return [false,false];
+  return [true,await cargarResumenRemitos()];
+}
 async function cargarMasRemitos(){
   const btn=document.getElementById('cargar-mas');setBusy(btn,true,'Cargando...');
   const ok=await cargarRemitos({reset:false});if(!ok){setBusy(btn,false,'Reintentar');mostrarErrorCarga();return;}
+  await cargarResumenRemitos();
   goTab(tabActual);
 }
 async function reintentarCargaRemitos(){
   const btn=document.getElementById('retry-load');setBusy(btn,true,'Reintentando...');
-  const [ok]=await Promise.all([cargarRemitos({reset:true}),cargarResumenRemitos()]);
+  const [ok]=await refrescarDatos();
   if(ok)goTab(tabActual||HOME[cu.rol]);else setBusy(btn,false,'Reintentar');
 }
 function botonCargarMas(){return hayMasRemitos?`<div style="padding:16px 20px"><button type="button" class="btn bl" id="cargar-mas" onclick="cargarMasRemitos()">Cargar más (${Math.max(0,totalRemitosDisponibles-remitos.length)} restantes)</button></div>`:'';}
@@ -1394,7 +1410,7 @@ function iniciarControlInactividad(){
 function iniciarRealtime(){
   if(realtimeChannel)return;
   realtimeChannel=sb.channel(`remitos-${cu.empresaId}`).on('postgres_changes',{event:'*',schema:'public',table:'remitos',filter:`empresa_id=eq.${cu.empresaId}`},async()=>{
-    const [ok]=await Promise.all([cargarRemitos({reset:true}),cargarResumenRemitos()]);
+    const [ok]=await refrescarDatos();
     if(ok&&(['dash','remitos','historial'].includes(tabActual)||(tabActual==='entrega'&&!entregaSeleccionadaId)))goTab(tabActual);
   }).subscribe(status=>{
     const bar=document.getElementById('realtime-bar');

@@ -1,5 +1,11 @@
 # Cambios de GoRemitos v2.9
 
+## Ajuste v2.9.1
+
+- Para hasta 100 remitos, el panel calcula el resumen con los registros que ya cargó.
+- Evita una consulta opcional innecesaria y el aviso técnico que producía en el piloto vacío.
+- Cuando la empresa supere ese volumen, conserva el resumen agregado del servidor.
+
 ## Prueba interna segura
 
 - Agrega un recorrido guiado con datos ficticios: Programado, En camino, Recepción y Cerrado.
