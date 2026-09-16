@@ -1,3 +1,3 @@
-GoRemitos 2.9.1
+GoRemitos 2.10.0
 Build: 2026-09-16
-Canal: prueba interna guiada
+Canal: modo de prueba interna persistente

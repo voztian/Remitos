@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
 <title>GoRemitos</title>
-<meta name="application-name" content="GoRemitos v2.9">
+<meta name="application-name" content="GoRemitos v2.10">
 <script src="/supabase-2.110.6.min.js"></script>
 <link rel="stylesheet" href="/tabler-icons-3.44.0.min.css">
 <style>
@@ -320,6 +320,9 @@ body{background:var(--page);color:var(--tx)}
 .setup-card h3{font-size:13px;margin:0 0 5px}.setup-card p{font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:12px}
 .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.setup-grid .wide{grid-column:1/-1}
 .warning-box{border:1px solid color-mix(in srgb,var(--amber) 45%,var(--bd));background:color-mix(in srgb,var(--amber) 7%,var(--bg));padding:12px;border-radius:10px;font-size:11px;line-height:1.55;color:var(--tx2)}
+.test-mode-banner{margin:14px 20px 0;padding:11px 13px;border:1px solid color-mix(in srgb,var(--or) 55%,var(--bd));border-radius:11px;background:color-mix(in srgb,var(--or) 9%,var(--bg));color:var(--tx2);font-size:11px;line-height:1.5;display:flex;gap:9px;align-items:flex-start}
+.test-mode-banner i{color:var(--or);font-size:18px;flex:none;margin-top:1px}.test-mode-banner strong{color:var(--or)}
+.test-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border:1px solid color-mix(in srgb,var(--or) 55%,var(--bd));border-radius:999px;color:var(--or);background:color-mix(in srgb,var(--or) 8%,transparent);font-size:9px;font-weight:750;letter-spacing:.45px;text-transform:uppercase;white-space:nowrap}
 .setup-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
 .setup-actions .btn{width:auto;min-width:150px;padding:10px 13px;font-size:12px}
 .demo-strip{margin:14px 20px 0;padding:10px 13px;border:1px solid color-mix(in srgb,var(--blue) 42%,var(--bd));border-radius:10px;background:color-mix(in srgb,var(--blue) 7%,var(--bg));display:flex;align-items:center;gap:9px;color:var(--tx2);font-size:11px;line-height:1.45}
@@ -420,6 +423,7 @@ body.modal-open{overflow:hidden}
   .screen.active>.tl{margin-left:0;margin-right:0}
   .screen.active>.items{padding-left:0;padding-right:0}
   .dashboard-screen>.warning-box{margin:16px 0 0!important}
+  #main-content>.test-mode-banner{margin:16px 0 0}
   .demo-screen>.demo-strip,.usuarios-screen>.driver-status{margin:16px 0 0}
   .demo-screen>.demo-grid{padding:20px 0 0}
   .dashboard-main-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(340px,.82fr);gap:20px;margin-top:20px;align-items:stretch}
@@ -657,7 +661,7 @@ body.modal-open{overflow:hidden}
 <script src="/qrcode-1.0.0.min.js"></script>
 <script>
 /* ===== SUPABASE ===== */
-const APP_VERSION='2.9.1';
+const APP_VERSION='2.10.0';
 const SUPABASE_URL='https://ospgkovvqqaaebzswngv.supabase.co';
 const SUPABASE_KEY='sb_publishable_Y66zEF0bcef_BRtlbJYIDg_9QrqLiuu';
 const RECOVERY_RETURN=(()=>{const h=new URLSearchParams(window.location.hash.replace(/^#/,'')),q=new URLSearchParams(window.location.search);return h.get('type')==='recovery'||q.get('type')==='recovery';})();
@@ -915,6 +919,23 @@ function cargarJsPDF(){
   });return jspdfPromise;
 }
 
+async function cargarModoPruebaEmpresa(){
+  if(!cu||!sb)return false;
+  const {data,error}=await sb.rpc('obtener_modo_prueba_empresa_v210');
+  if(error){
+    cu.modoPruebaDisponible=false;cu.modoPruebaInterna=false;cu.remitosPruebaPendientes=0;cu.remitosPruebaTotal=0;
+    console.error('modo-prueba',error);return false;
+  }
+  const estado=Array.isArray(data)?data[0]:data;
+  cu.modoPruebaDisponible=true;
+  cu.modoPruebaInterna=estado?.modo_prueba_interna===true;
+  cu.remitosPruebaPendientes=Number(estado?.remitos_prueba_pendientes||0);
+  cu.remitosPruebaTotal=Number(estado?.remitos_prueba_total||0);
+  cu.plataformaRealLista=estado?.plataforma_real_lista===true;
+  cu.empresaRealLista=estado?.empresa_real_lista===true;
+  return true;
+}
+
 async function cargarSesion(){
   const {data:{session},error:sessionError}=await sb.auth.getSession();
   if(sessionError){estadoPerfil='error';console.error(sessionError);return false;}
@@ -931,9 +952,11 @@ async function cargarSesion(){
     empresaEmailPrivacidad:perfil.empresa_email_privacidad||'',empresaTelefonoPrivacidad:perfil.empresa_telefono_privacidad||'',
     empresaPoliticaRetencion:perfil.empresa_politica_retencion||'',
     adminPlataforma:perfil.admin_plataforma===true,registroEmailHabilitado:perfil.registro_email_habilitado===true,
-    plataformaListaPiloto:perfil.plataforma_lista_piloto===true
+    plataformaListaPiloto:perfil.plataforma_lista_piloto===true,
+    modoPruebaInterna:false,modoPruebaDisponible:false,remitosPruebaPendientes:0,remitosPruebaTotal:0
   };
   registroEmailHabilitado=cu.registroEmailHabilitado;
+  await cargarModoPruebaEmpresa();
   await refrescarDatos();
   estadoPerfil='ok';
   arrancarApp();
@@ -941,7 +964,7 @@ async function cargarSesion(){
 }
 function mapearRemito(r){
   return {
-    id:r.id,num:r.num,cliente:r.cliente,dir:r.dir,contacto:r.contacto,tel:r.tel,
+    id:r.id,num:r.num,cliente:r.cliente,dir:r.dir,contacto:r.contacto,tel:r.tel,esPrueba:r.es_prueba===true,
     chofer:r.chofer_nombre,chofer_id:r.chofer_id,fecha:r.fecha,estado:r.estado,salidaAt:r.salida_at,salidaPor:r.salida_por,
     conformidad:r.conformidad,obs:r.obs,nota:r.nota,publicToken:r.public_token,evidenceHash:r.evidence_hash,lockedAt:r.locked_at,
     documentoUrl:r.documento_url,documentoSha256:r.documento_sha256,documentoNombre:r.documento_nombre,documentoMime:r.documento_mime,documentoSize:r.documento_size,
@@ -981,7 +1004,8 @@ async function cargarResumenRemitos(){
 async function refrescarDatos(){
   const ok=await cargarRemitos({reset:true});
   if(!ok)return [false,false];
-  return [true,await cargarResumenRemitos()];
+  const resumenOk=await cargarResumenRemitos();await cargarModoPruebaEmpresa();
+  return [true,resumenOk];
 }
 async function cargarMasRemitos(){
   const btn=document.getElementById('cargar-mas');setBusy(btn,true,'Cargando...');
@@ -1090,7 +1114,7 @@ async function cargarSeguimientoPublico(silencioso=false){
     card.innerHTML='<div class="banner" style="margin:0"><i class="ti ti-link-off" style="color:var(--red)"></i><div class="banner-tit">Enlace inválido</div><div class="banner-sub">Pedile a la empresa que vuelva a compartir el seguimiento.</div></div>';return;
   }
   if(!silencioso)card.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:13px">Consultando el estado…</div>';
-  const {data,error}=await sb.rpc('obtener_seguimiento_publico_v27',{p_token:tokenSeguimiento});
+  const {data,error}=await rpcVersionado('obtener_seguimiento_publico_v210','obtener_seguimiento_publico_v27',{p_token:tokenSeguimiento});
   if(error){
     if(!silencioso)card.innerHTML=`<div class="banner" style="margin:0"><i class="ti ti-wifi-off" style="color:var(--amber)"></i><div class="banner-tit">No pudimos consultar la entrega</div><div class="banner-sub">Revisá tu conexión e intentá nuevamente.</div></div><button type="button" class="btn bl" style="margin-top:14px" onclick="cargarSeguimientoPublico()">Reintentar</button>`;
     return;
@@ -1100,6 +1124,7 @@ async function cargarSeguimientoPublico(silencioso=false){
   const nivel=nivelSeguimiento(r.estado),color=r.estado==='Rechazado'?'var(--red)':r.estado==='Entregado con observaciones'?'var(--amber)':r.estado==='Entregado'?'var(--green)':'var(--or)';
   document.title=`${r.estado} · GoRemitos`;
   card.innerHTML=`
+    ${r.es_prueba?'<div class="test-mode-banner" style="margin:0 0 14px"><i class="ti ti-flask"></i><div><strong>Seguimiento de prueba.</strong> No corresponde a una entrega real.</div></div>':''}
     <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px">${esc(r.empresa)}</div>
     <div style="font-size:14px;font-weight:650;margin-top:5px" class="tnum">Remito N° ${esc(r.numero)}</div>
     <div class="tracking-state" style="color:${color}"><span class="pulse" style="background:${color};box-shadow:0 0 0 6px color-mix(in srgb,${color} 15%,transparent)"></span>${esc(r.estado)}</div>
@@ -1218,6 +1243,7 @@ function cuitValido(v){
 function empresaListaParaOperar(){return !!cu&&!!cu.empresaRazonSocial&&cuitValido(cu.empresaCuit)&&!!cu.empresaDomicilioPrivacidad&&emailValido(cu.empresaEmailPrivacidad||'')&&String(cu.empresaPoliticaRetencion||'').trim().length>=10;}
 function bloqueosOperacion(){
   if(!cu)return [];
+  if(cu.modoPruebaInterna)return [];
   const bloqueos=[];
   if(!empresaListaParaOperar())bloqueos.push({id:'empresa',texto:'datos legales y política de conservación de la empresa'});
   if(cu.adminPlataforma&&(!configPublica.responsable_nombre||!configPublica.responsable_domicilio||!configPublica.privacidad_email||!configPublica.soporte_email))bloqueos.push({id:'plataforma',texto:'datos del responsable de GoRemitos'});
@@ -1225,11 +1251,24 @@ function bloqueosOperacion(){
   return bloqueos;
 }
 function exigirPreparacionOperativa(){
+  if(cu?.modoPruebaInterna)return true;
   if(!cu?.plataformaListaPiloto){alert('El piloto todavía no está habilitado. El responsable de GoRemitos debe completar y verificar la preparación operativa.');return false;}
   if(!empresaListaParaOperar()){alert('Antes de operar con datos reales, un administrador debe completar los datos legales y la política de conservación de la empresa en Usuarios.');return false;}
   return true;
 }
+function badgePrueba(rem){return rem?.esPrueba?'<span class="test-badge"><i class="ti ti-flask"></i>Prueba</span>':'';}
+function bannerModoPrueba(){
+  if(!cu?.modoPruebaInterna)return '';
+  return '<div class="test-mode-banner" role="status"><i class="ti ti-flask"></i><div><strong>Modo de prueba interna activo.</strong> Usá solamente datos ficticios. Todo lo que se cree quedará marcado como PRUEBA y separado visualmente de la operación real.</div></div>';
+}
+function contenidoConModoPrueba(html){return `${bannerModoPrueba()}${html}`;}
 function requireOnline(){if(navigator.onLine)return true;alert('Necesitás conexión para guardar esta operación. Tus datos todavía no fueron enviados.');return false;}
+function rpcNoDisponible(error,nombre){const m=String(error?.message||'');return ['PGRST202','42883'].includes(error?.code)||m.includes(nombre)&&/schema cache|function|does not exist|Could not find/i.test(m);}
+async function rpcVersionado(nuevo,anterior,parametros){
+  const intento=await sb.rpc(nuevo,parametros);
+  if(intento.error&&anterior&&rpcNoDisponible(intento.error,nuevo))return sb.rpc(anterior,parametros);
+  return intento;
+}
 function setBusy(btn,busy,label){if(!btn)return;btn.disabled=busy;if(label)btn.innerHTML=label;}
 function showErr(id,msg){const el=document.getElementById(id);if(el){el.setAttribute('role','alert');el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',7000);}}
 function showOk(id,msg){const el=document.getElementById(id);if(el){el.setAttribute('role','status');el.textContent=msg;el.style.display='block';}}
@@ -1384,7 +1423,10 @@ async function verificarAccesoVigente(){
       empresaTelefonoPrivacidad:acceso.empresa_telefono_privacidad||'',empresaPoliticaRetencion:acceso.empresa_politica_retencion||'',
       plataformaListaPiloto:acceso.plataforma_lista_piloto===true
     });
+    const modoAnterior=cu.modoPruebaInterna;
+    await cargarModoPruebaEmpresa();
     actualizarIdentidadHeader();
+    if(modoAnterior!==cu.modoPruebaInterna&&tabActual)goTab(tabActual);
   }
 }
 function iniciarControlAcceso(){
@@ -1433,7 +1475,7 @@ function buildNav(){
     ?`<button type="button" class="bn-plus" id="bn-nuevo" onclick="goTab('nuevo')" aria-label="Crear nuevo remito"><i class="ti ti-plus" aria-hidden="true"></i><span class="bn-plus-label">Nuevo remito</span></button>`
     :`<button type="button" class="bn-item" id="bn-${it.id}" onclick="goTab('${it.id}')"><i class="ti ${it.ico}"></i><span>${it.lbl}</span></button>`
   ).join('');
-  document.getElementById('bnav').innerHTML=`<div class="desktop-nav-head"><div class="desktop-nav-logo"><b>Go</b>Remitos</div><div class="desktop-nav-kicker">${esc(cu.empresa)} · ${esc(ROL_LBL[cu.rol]||cu.rol)}</div></div><div class="desktop-nav-menu">${botones}</div><div class="desktop-nav-foot"><span>GoRemitos 2.9</span><span>Seguimiento y constancias</span></div>`;
+  document.getElementById('bnav').innerHTML=`<div class="desktop-nav-head"><div class="desktop-nav-logo"><b>Go</b>Remitos</div><div class="desktop-nav-kicker">${esc(cu.empresa)} · ${esc(ROL_LBL[cu.rol]||cu.rol)}</div></div><div class="desktop-nav-menu">${botones}</div><div class="desktop-nav-foot"><span>GoRemitos 2.10</span><span>Seguimiento y constancias</span></div>`;
   goTab(HOME[cu.rol]);
   if(tokenObjetivo){
     const r=remitos.find(x=>String(x.publicToken)===String(tokenObjetivo));
@@ -1451,7 +1493,7 @@ function goTab(id){
   const el=document.getElementById('main-content');
   if(cargaRemitosError&&id!=='usuarios'){el.innerHTML=renderErrorCarga();return;}
   const fns={dash:renderDash,remitos:renderRemitos,usuarios:renderUsuarios,nuevo:renderNuevo,entrega:renderEntrega,manual:renderManual,historial:renderHistorial,demo:renderDemo};
-  el.innerHTML=(fns[id]||renderDash)();
+  el.innerHTML=contenidoConModoPrueba((fns[id]||renderDash)());
   asociarEtiquetas(el);
   if(id==='nuevo')setTimeout(initNuevoForm,0);
   if(id==='demo'&&demoState?.etapa==='recepcion')setTimeout(initDemoFirma,50);
@@ -1478,7 +1520,7 @@ function renderDash(){
     else if(r.chofer)sub=`${s.lbl} · ${esc(r.chofer)}`;
     return `<button type="button" class="rowitem" onclick='verDetalle(${js(r.id)})'>
       <span class="dot" style="background:${s.col}"></span>
-      <div style="flex:1;min-width:0"><div class="rt"><b class="tnum">N° ${esc(r.num||'—')}</b> — ${esc(r.cliente||'Remito manual')}</div><div class="rs">${sub}</div></div>
+      <div style="flex:1;min-width:0"><div class="rt" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><b class="tnum">N° ${esc(r.num||'—')}</b>${badgePrueba(r)}<span>— ${esc(r.cliente||'Remito manual')}</span></div><div class="rs">${sub}</div></div>
       <span class="time tnum">${hora}</span>
     </button>`;
   }).join('');
@@ -1569,7 +1611,7 @@ function renderRemitos(){
     <div class="list-panel">
     <div class="search"><i class="ti ti-search"></i><input aria-label="Buscar remitos" placeholder="Buscar cliente, número, chofer..." oninput="refreshList()" id="q-search"></div>
     <div class="tabs">
-      ${[['todos','Todos'],['Programado','Programados'],['EnCamino','En camino'],['cerrados','Entregados'],['prob','Problemas'],['Manual','Manuales']].map(([k,l])=>`<button class="tab ${filtro===k?'on':''}" onclick="setFiltro('${k}',this)">${l}</button>`).join('')}
+      ${[['todos','Todos'],['Prueba','Pruebas'],['Programado','Programados'],['EnCamino','En camino'],['cerrados','Entregados'],['prob','Problemas'],['Manual','Manuales']].map(([k,l])=>`<button class="tab ${filtro===k?'on':''}" onclick="setFiltro('${k}',this)">${l}</button>`).join('')}
     </div>
     <div id="lr">${listaRemitos()}</div>${botonCargarMas()}</div>
   </div>`;
@@ -1580,6 +1622,7 @@ function listaRemitos(){
   const q=(document.getElementById('q-search')?.value||'').toLowerCase();
   let f=remitos.filter(r=>[r.num,r.cliente,r.chofer].join(' ').toLowerCase().includes(q));
   if(filtro==='prob')f=f.filter(r=>r.estado==='Disconforme'||r.estado==='Rechazado');
+  else if(filtro==='Prueba')f=f.filter(r=>r.esPrueba);
   else if(filtro==='Programado')f=f.filter(r=>r.estado==='Pendiente'&&!r.salidaAt);
   else if(filtro==='EnCamino')f=f.filter(r=>r.estado==='Pendiente'&&r.salidaAt);
   else if(filtro==='cerrados')f=f.filter(r=>['Firmado','Disconforme','Rechazado'].includes(r.estado));
@@ -1598,7 +1641,7 @@ function lRow(r){
   if(fotos)extra.push(`${fotos} foto${fotos>1?'s':''}`);
   if(r.obs)extra.push('1 observación');
   return `<button type="button" class="lrow ${r.estado==='Pendiente'?'hot':''}" onclick='verDetalle(${js(r.id)})'>
-    <div class="top"><div style="display:flex;align-items:center;gap:9px"><span class="num tnum">N° ${esc(r.num||'—')}</span>${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div>
+    <div class="top"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="num tnum">N° ${esc(r.num||'—')}</span>${badgePrueba(r)}${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div>
     <div class="cli">${esc(r.cliente||'Remito manual')}</div>
     <div class="meta tnum">${metas.join(' · ')}${extra.length?' · '+extra.join(' · '):''}</div>
   </button>`;
@@ -1643,10 +1686,10 @@ async function verDetalle(id){
       ${it.foto?`<div style="margin-top:10px;margin-left:29px"><img src="${escAttr(it.foto)}" alt="Evidencia del ítem" style="width:100%;max-height:170px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)"></div>`:''}
     </div>`;
   }).join('');
-  document.getElementById('main-content').innerHTML=`<div class="screen active">
+  const detalleHtml=`<div class="screen active">
     <div class="pagehead">
       <button class="bgh" onclick="goTab('${['dash','historial','remitos'].includes(tabActual)?tabActual:'remitos'}')" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:12px"><i class="ti ti-arrow-left" style="font-size:15px"></i>Volver</button>
-      <div style="display:flex;align-items:center;gap:10px"><span class="tit tnum">N° ${esc(r.num||'—')}</span>${statusPill(r)}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tit tnum">N° ${esc(r.num||'—')}</span>${badgePrueba(r)}${statusPill(r)}</div>
       <div class="sub">${esc(r.cliente||'Remito manual')}</div>
     </div>
     ${tl}
@@ -1671,7 +1714,7 @@ async function verDetalle(id){
       ${r.firma?`<div style="padding:12px 15px;border-top:1px solid var(--bd-soft)"><div style="background:#fff;border-radius:8px;padding:5px;border:1px solid var(--bd)"><img src="${escAttr(r.firma)}" alt="Firma del receptor" style="width:100%;display:block;max-height:85px;object-fit:contain"></div></div>`:''}
     </div>`:''}
     ${r.evidenceHash?`<div class="card"><div class="crow"><i class="ti ti-shield-check"></i><div><div class="cl">Identificador de integridad</div><div class="hash">${esc(r.evidenceHash)}</div></div></div></div>`:''}
-    ${r.publicToken?`<div class="qr-card"><div class="t" style="font-size:13px;font-weight:600">Seguimiento para el destinatario</div><div class="sub">El enlace sólo informa el avance; no muestra datos personales ni evidencias.</div><div id="qr-detalle"></div><button type="button" class="btn bl" style="margin-top:12px" onclick='compartirSeguimiento(${js(r.id)})'><i class="ti ti-share-3"></i>Compartir seguimiento</button></div>`:''}
+    ${r.publicToken?`<div class="qr-card"><div class="t" style="font-size:13px;font-weight:600">${r.esPrueba?'Seguimiento de prueba':'Seguimiento para el destinatario'}</div><div class="sub">${r.esPrueba?'Compartilo solamente con tu equipo interno.':'El enlace sólo informa el avance; no muestra datos personales ni evidencias.'}</div><div id="qr-detalle"></div><button type="button" class="btn bl" style="margin-top:12px" onclick='compartirSeguimiento(${js(r.id)})'><i class="ti ti-share-3"></i>Compartir seguimiento</button></div>`:''}
     ${['admin','oficina'].includes(cu.rol)?`<div class="sechead"><span class="t">Trazabilidad</span></div><div id="audit-remito"><div class="sub" style="padding:0 20px">Cargando eventos...</div></div>`:''}
     <div class="pad" style="display:flex;flex-direction:column;gap:9px">
       ${r.documentoUrl?`<button class="btn bl" onclick='descargarDocumentoRemito(${js(r.id)})'><i class="ti ti-download"></i>Descargar remito original</button><button class="btn bl" onclick='compartirDocumentoRemito(${js(r.id)})'><i class="ti ti-share"></i>Compartir remito original</button>`:''}
@@ -1680,6 +1723,7 @@ async function verDetalle(id){
       ${cu.rol==='admin'&&r.estado==='Pendiente'&&!r.salidaAt?`<button class="btn bdanger" onclick='eliminarRemito(${js(r.id)})'><i class="ti ti-trash"></i>Eliminar entrega programada</button>`:''}
     </div>
   </div>`;
+  document.getElementById('main-content').innerHTML=contenidoConModoPrueba(detalleHtml);
   if(r.publicToken)setTimeout(()=>renderQR('qr-detalle',urlSeguimiento(r)),0);
   if(['admin','oficina'].includes(cu.rol))setTimeout(()=>cargarEventosRemito(r.id),0);
   window.scrollTo(0,0);
@@ -1694,10 +1738,18 @@ async function cargarEventosRemito(id){
 
 /* ===== USUARIOS ===== */
 function renderUsuarios(){
+  const modoActivo=cu.modoPruebaInterna,pendientesPrueba=Number(cu.remitosPruebaPendientes||0);
   return `<div class="screen active usuarios-screen">
     <div class="pagehead"><div class="tit">Usuarios</div><div class="sub">Accesos de ${esc(cu.empresa)}</div></div>
     <div id="usr-driver-status" class="driver-status">Comprobando si hay choferes activos…</div>
     <div class="users-grid"><div class="users-settings">
+    <div class="setup-card" style="border-color:${modoActivo?'color-mix(in srgb,var(--or) 60%,var(--bd))':'var(--bd)'}">
+      <h3>Modo de prueba interna</h3>
+      <p>${modoActivo?'Está activo. Oficina puede programar entregas y el chofer puede completar el circuito usando solamente datos ficticios.':'Permite probar carga, viaje, firma y cierre sin habilitar todavía la operación real.'}</p>
+      <div class="${modoActivo?'warning-box':'inline-help'}" style="${modoActivo?'margin-bottom:12px':''}">${modoActivo?`Todos los registros nuevos quedarán marcados como <strong>PRUEBA</strong>. Hay ${pendientesPrueba} entrega${pendientesPrueba===1?'':'s'} de prueba pendiente${pendientesPrueba===1?'':'s'}.`:'No reemplaza la configuración legal ni habilita entregas reales.'}</div>
+      <button type="button" class="btn ${modoActivo?'bdanger':'bo'}" id="modo-prueba-toggle" onclick="cambiarModoPruebaEmpresa()" ${modoActivo&&pendientesPrueba>0?'disabled title="Cerrá o eliminá las pruebas pendientes antes de desactivarlo"':''}>${modoActivo?'Desactivar modo de prueba':'Activar modo de prueba'}</button>
+      ${modoActivo&&pendientesPrueba>0?'<div class="inline-help" style="margin-top:8px">Para desactivarlo, primero cerrá o eliminá todas las entregas de prueba pendientes.</div>':''}
+    </div>
     <div class="setup-card">
       <h3>Datos legales de la empresa</h3>
       <p>Se mostrarán en la política y en los comprobantes nuevos. Completalos antes de usar datos reales.</p>
@@ -1732,6 +1784,19 @@ function renderUsuarios(){
       <div id="usr-lista"><div class="sub" style="padding:0 20px">Cargando usuarios...</div></div>
     </div></div></div>
   </div>`;
+}
+async function cambiarModoPruebaEmpresa(){
+  if(!requireOnline())return;
+  if(!cu?.modoPruebaDisponible){alert('Primero hay que instalar la actualización v2.10 en Supabase.');return;}
+  const activar=!cu.modoPruebaInterna;
+  const mensaje=activar
+    ?'¿Activar el modo de prueba interna?\n\nUsá únicamente datos ficticios. Los remitos, firmas y evidencias quedarán guardados y marcados permanentemente como PRUEBA.'
+    :'¿Desactivar el modo de prueba?\n\nDespués de hacerlo, la app volverá a exigir toda la preparación para operar con datos reales.';
+  if(!confirm(mensaje))return;
+  const btn=document.getElementById('modo-prueba-toggle');setBusy(btn,true,activar?'Activando...':'Desactivando...');
+  const {error}=await sb.rpc('actualizar_modo_prueba_empresa_v210',{p_activo:activar});
+  if(error){setBusy(btn,false,activar?'Activar modo de prueba':'Desactivar modo de prueba');alert(error.message);return;}
+  await cargarModoPruebaEmpresa();await refrescarDatos();goTab('usuarios');
 }
 function renderAdministracionPlataforma(){
   return `<div class="setup-card" style="border-color:color-mix(in srgb,var(--or) 35%,var(--bd))">
@@ -1962,7 +2027,7 @@ function renderNuevo(){
   const bloqueos=bloqueosOperacion(),operacionLista=bloqueos.length===0;
   return `<div class="screen active new-screen"><div id="nv-form">
     <div class="pagehead"><div class="tit">${editando?'Editar entrega programada':'Programar entrega'}</div><div class="sub">${editando?'Sólo puede modificarse antes de iniciar el viaje':'Adjuntá el remito emitido por tu empresa y asigná el viaje'}</div></div>
-    ${!operacionLista?`<div class="warning-box" style="margin:14px 20px 0"><strong>Todavía no se puede guardar una entrega real.</strong> Falta ${esc(bloqueos.map(x=>x.texto).join(', '))}. Podés recorrer el circuito completo sin guardar información.<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar sin guardar</button>${cu.rol==='admin'?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')">Revisar configuración</button>':''}</div></div>`:''}
+    ${!operacionLista?`<div class="warning-box" style="margin:14px 20px 0"><strong>Todavía no se puede guardar una entrega real.</strong> Falta ${esc(bloqueos.map(x=>x.texto).join(', '))}. Un administrador puede activar el modo de prueba interna desde Usuarios.<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar sin guardar</button>${cu.rol==='admin'?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')">Activar prueba interna</button>':''}</div></div>`:''}
     <div class="pad">
     <div class="row2"><div class="field"><label>N° remito *</label><input id="f-num" placeholder="0001" type="text" maxlength="50"></div><div class="field"><label>Fecha *</label><input id="f-fecha" type="date" value="${hoy()}"></div></div>
     <div class="field"><label>Cliente *</label><input id="f-cli" placeholder="Nombre o empresa" type="text" maxlength="160"></div>
@@ -1983,7 +2048,7 @@ function renderNuevo(){
       <div id="items-wrap"></div>
       <button class="btn bl" style="margin-top:6px;padding:10px;font-size:12px" onclick="addItem()"><i class="ti ti-plus" style="font-size:13px"></i>Agregar ítem</button>
     </div>
-    <button class="btn bp" id="btn-guardar-remito" style="margin-top:6px" onclick="guardarRemito()" ${!operacionLista?'disabled title="Completá la configuración o usá la prueba sin guardar"':''}>${editando?'Guardar cambios':'Programar entrega'}<i class="ti ti-arrow-right"></i></button>
+    <button class="btn bp" id="btn-guardar-remito" style="margin-top:6px" onclick="guardarRemito()" ${!operacionLista?'disabled title="Completá la configuración o activá el modo de prueba"':''}>${editando?'Guardar cambios':cu.modoPruebaInterna?'Programar prueba':'Programar entrega'}<i class="ti ti-arrow-right"></i></button>
     ${editando?`<button class="btn bl" style="margin-top:8px" onclick="cancelarEdicion()">Cancelar edición</button>`:''}
     </div>
   </div>
@@ -2056,15 +2121,15 @@ async function guardarRemito(){
   try{
     const doc=documentoNuevo?await subirDocumentoRemito(documentoNuevo):{path:anterior.documentoUrl,sha256:anterior.documentoSha256,nombre:anterior.documentoNombre,mime:anterior.documentoMime,size:anterior.documentoSize};
     if(documentoNuevo)documentoSubido=doc.path;
-    const {data,error}=await sb.rpc('guardar_remito_v27',{p_remito_id:editandoId,p_num:num,p_cliente:cli,p_dir:dir,p_contacto:gv('f-cont'),p_tel:gv('f-tel'),p_chofer_id:choferId,p_fecha:gv('f-fecha')||hoy(),p_items:its,p_documento_url:doc.path,p_documento_sha256:doc.sha256,p_documento_nombre:doc.nombre,p_documento_mime:doc.mime,p_documento_size:doc.size});
+    const {data,error}=await rpcVersionado('guardar_remito_v210','guardar_remito_v27',{p_remito_id:editandoId,p_num:num,p_cliente:cli,p_dir:dir,p_contacto:gv('f-cont'),p_tel:gv('f-tel'),p_chofer_id:choferId,p_fecha:gv('f-fecha')||hoy(),p_items:its,p_documento_url:doc.path,p_documento_sha256:doc.sha256,p_documento_nombre:doc.nombre,p_documento_mime:doc.mime,p_documento_size:doc.size});
     if(error)throw error;remId=data;
     if(documentoSubido&&anterior?.documentoUrl&&anterior.documentoUrl!==documentoSubido)await limpiarDocumentosHuerfanos([anterior.documentoUrl]);
-  }catch(error){if(documentoSubido)await limpiarDocumentosHuerfanos([documentoSubido]);alert('Error al guardar: '+(error.message||error));setBusy(btn,false,eraEdicion?'Guardar cambios':'Programar entrega');return;}
+  }catch(error){if(documentoSubido)await limpiarDocumentosHuerfanos([documentoSubido]);alert('Error al guardar: '+(error.message||error));setBusy(btn,false,eraEdicion?'Guardar cambios':cu.modoPruebaInterna?'Programar prueba':'Programar entrega');return;}
   await refrescarDatos();
   remitoActual=remitos.find(r=>String(r.id)===String(remId));editandoId=null;documentoNuevo=null;
   const r=remitoActual;
   if(!r){alert('El remito se guardó, pero no se pudo recargar. Volvé a Remitos.');goTab('remitos');return;}
-  document.querySelector('#nv-ok .banner-tit').textContent=eraEdicion?'Entrega actualizada':'Entrega programada';
+  document.querySelector('#nv-ok .banner-tit').textContent=r.esPrueba?(eraEdicion?'Prueba actualizada':'Prueba programada'):(eraEdicion?'Entrega actualizada':'Entrega programada');
   document.getElementById('ok-info').innerHTML=`<span class="tnum">N° ${esc(r.num)}</span> · ${esc(r.cliente)}${r.chofer?`<br>Asignado a <strong style="color:var(--tx)">${esc(r.chofer)}</strong>`:''}`;
   document.getElementById('ok-card').innerHTML=`
     <div class="crow"><i class="ti ti-map-pin"></i><div class="cv" style="flex:1">${esc(r.dir)}</div></div>
@@ -2072,7 +2137,7 @@ async function guardarRemito(){
     <div class="crow"><i class="ti ti-package"></i><div class="cv" style="flex:1">${r.items.length} ítem${r.items.length>1?'s':''} · ${r.items.reduce((a,x)=>a+(Number(x.qty)||0),0)} unidades</div></div>
     ${r.tel?`<div class="crow"><i class="ti ti-phone"></i><div class="cv tnum" style="flex:1">${esc(r.tel)}${r.contacto?' · '+esc(r.contacto):''}</div></div>`:''}`;
   const wa=document.getElementById('btn-wa-cli');
-  wa.style.display=r.tel?'flex':'none';
+  wa.style.display=r.tel&&!r.esPrueba?'flex':'none';
   document.getElementById('nv-form').style.display='none';document.getElementById('nv-ok').style.display='block';
   if(r.publicToken){const qw=document.getElementById('qr-nuevo-wrap');qw.style.display='block';setTimeout(()=>renderQR('qr-nuevo',urlSeguimiento(r)),0);}
   window.scrollTo(0,0);
@@ -2089,6 +2154,7 @@ function telWA(t){
 }
 function avisarCliente(tipo='programado'){
   const r=remitoActual;if(!r||!r.tel)return;
+  if(r.esPrueba){alert('Las entregas de prueba no envían avisos a destinatarios. Compartí el seguimiento sólo con tu equipo interno.');return;}
   const enCamino=tipo==='en_camino',titulo=enCamino?'Tu pedido está en camino':'Tu entrega fue programada';
   const msg=`🚚 *${titulo}*\n${cu.empresa}\n\nRemito N° ${r.num} · ${r.fecha}\nEntrega: ${r.dir}${r.chofer?`\nChofer: ${r.chofer}`:''}\n\nSeguí el estado acá: ${urlSeguimiento(r)}\n\nEl enlace no muestra datos personales ni el contenido del remito.`;
   window.open(`https://wa.me/${telWA(r.tel)}?text=${encodeURIComponent(msg)}`,'_blank','noopener,noreferrer');
@@ -2107,7 +2173,7 @@ function urlRemito(r){return `${window.location.origin}${window.location.pathnam
 function urlSeguimiento(r){return `${window.location.origin}${window.location.pathname}#seguimiento=${encodeURIComponent(r.publicToken)}`;}
 async function compartirSeguimiento(id){
   const r=remitos.find(x=>String(x.id)===String(id));if(!r?.publicToken)return;
-  const enlace=urlSeguimiento(r),texto=`Seguimiento del remito N° ${r.num} de ${cu.empresa}`;
+  const enlace=urlSeguimiento(r),texto=`${r.esPrueba?'PRUEBA INTERNA · ':''}Seguimiento del remito N° ${r.num} de ${cu.empresa}`;
   if(navigator.share){try{await navigator.share({title:'Seguimiento de entrega',text:texto,url:enlace});return;}catch(e){if(e?.name==='AbortError')return;}}
   if(await copiarTextoSeguro(`${texto}\n${enlace}`))alert('Enlace de seguimiento copiado.');else alert('No se pudo copiar el enlace.');
 }
@@ -2121,13 +2187,13 @@ function renderEntrega(){
   if(seleccionada)return renderEntregaDetalle(seleccionada,pendientes.length);
   entregaSeleccionadaId=null;
   if(!pendientes.length)return `<div class="screen active delivery-list-screen">${empty('ti-circle-check','Sin entregas pendientes','Esperá que oficina te asigne un remito')}</div>`;
-  return `<div class="screen active delivery-list-screen"><div class="pagehead"><div class="tit">Mis entregas</div><div class="sub">${pendientes.length} activa${pendientes.length>1?'s':''} o programada${pendientes.length>1?'s':''}</div></div><div class="list-panel" style="margin-top:14px">${pendientes.map(r=>`<button type="button" class="lrow hot" onclick='abrirEntrega(${js(r.id)})'><div class="top"><div style="display:flex;align-items:center;gap:9px"><span class="num tnum">N° ${esc(r.num)}</span>${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div><div class="cli">${esc(r.cliente)}</div><div class="meta">${esc(r.dir)} · ${esc(r.fecha)}${r.salidaAt?` · salida ${new Date(r.salidaAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`:''}</div></button>`).join('')}</div></div>`;
+  return `<div class="screen active delivery-list-screen"><div class="pagehead"><div class="tit">Mis entregas</div><div class="sub">${pendientes.length} activa${pendientes.length>1?'s':''} o programada${pendientes.length>1?'s':''}</div></div><div class="list-panel" style="margin-top:14px">${pendientes.map(r=>`<button type="button" class="lrow hot" onclick='abrirEntrega(${js(r.id)})'><div class="top"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="num tnum">N° ${esc(r.num)}</span>${badgePrueba(r)}${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div><div class="cli">${esc(r.cliente)}</div><div class="meta">${esc(r.dir)} · ${esc(r.fecha)}${r.salidaAt?` · salida ${new Date(r.salidaAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`:''}</div></button>`).join('')}</div></div>`;
 }
 function abrirEntrega(id){
   const r=remitos.find(x=>String(x.id)===String(id)&&x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id));
   if(!r){alert('Esta entrega no está disponible para tu usuario.');return;}
   entregaSeleccionadaId=r.id;resetEntregaState();
-  document.getElementById('main-content').innerHTML=renderEntregaDetalle(r,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length);
+  document.getElementById('main-content').innerHTML=contenidoConModoPrueba(renderEntregaDetalle(r,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length));
   window.scrollTo(0,0);
 }
 function volverEntregas(){entregaSeleccionadaId=null;resetEntregaState();goTab('entrega');}
@@ -2137,10 +2203,10 @@ async function iniciarEntrega(id){
   if(!rem.documentoUrl){alert('La oficina debe adjuntar el remito original antes de iniciar el viaje.');return;}
   if(!confirm(`¿Iniciar ahora el viaje del remito N° ${rem.num}?\n\nDesde este momento figurará “En camino” y ya no podrá editarse ni eliminarse.`))return;
   const btn=document.getElementById('btn-iniciar-entrega');setBusy(btn,true,'Iniciando...');
-  const {error}=await sb.rpc('marcar_en_camino_v27',{p_remito_id:id});
+  const {error}=await rpcVersionado('marcar_en_camino_v210','marcar_en_camino_v27',{p_remito_id:id});
   if(error){alert('No se pudo iniciar: '+error.message);setBusy(btn,false,'Iniciar viaje');return;}
   await refrescarDatos();const actualizado=remitos.find(x=>String(x.id)===String(id));
-  if(!actualizado){volverEntregas();return;}entregaSeleccionadaId=actualizado.id;resetEntregaState();document.getElementById('main-content').innerHTML=renderEntregaDetalle(actualizado,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length);window.scrollTo(0,0);
+  if(!actualizado){volverEntregas();return;}entregaSeleccionadaId=actualizado.id;resetEntregaState();document.getElementById('main-content').innerHTML=contenidoConModoPrueba(renderEntregaDetalle(actualizado,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length));window.scrollTo(0,0);
 }
 function renderEntregaDetalle(rem,totalPendientes=1){
   remitoActual=rem;
@@ -2149,7 +2215,7 @@ function renderEntregaDetalle(rem,totalPendientes=1){
     return `<div class="screen active">
       <div class="pagehead">
         ${totalPendientes>1?`<button class="bgh" onclick="volverEntregas()" style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><i class="ti ti-arrow-left"></i>Mis entregas</button>`:''}
-        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--tx3);font-weight:500" class="tnum">REMITO N° ${esc(rem.num)}</span>${statusPill(rem)}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--tx3);font-weight:500" class="tnum">REMITO N° ${esc(rem.num)}</span>${badgePrueba(rem)}${statusPill(rem)}</div>
         <div class="tit" style="margin-top:6px">${esc(rem.cliente)}</div>
       </div>
       <div class="card">
@@ -2170,7 +2236,7 @@ function renderEntregaDetalle(rem,totalPendientes=1){
   return `<div class="screen active">
     <div class="pagehead">
       ${totalPendientes>1?`<button class="bgh" onclick="volverEntregas()" style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><i class="ti ti-arrow-left"></i>Mis entregas</button>`:''}
-      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--tx3);font-weight:500" class="tnum">REMITO N° ${esc(rem.num)}</span>${statusPill(rem)}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--tx3);font-weight:500" class="tnum">REMITO N° ${esc(rem.num)}</span>${badgePrueba(rem)}${statusPill(rem)}</div>
       <div class="tit" style="margin-top:6px">${esc(rem.cliente)}</div>
     </div>
     <div class="card">
@@ -2178,7 +2244,7 @@ function renderEntregaDetalle(rem,totalPendientes=1){
       ${rem.tel?`<button type="button" class="crow click" onclick='llamarRemito(${js(rem.id)})'><i class="ti ti-phone"></i><div class="cv tnum" style="flex:1">${esc(rem.tel)}${rem.contacto?' · '+esc(rem.contacto):''}</div><span class="act">Llamar</span></button>`:''}
     </div>
     ${rem.documentoUrl?`<div class="card"><button type="button" class="crow click" onclick='verDocumentoRemito(${js(rem.id)})'><i class="ti ti-file-description"></i><div style="flex:1;min-width:0"><div class="cl">Remito original</div><div class="cv" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(rem.documentoNombre)}</div></div><span class="act">Abrir</span></button></div>`:''}
-    ${rem.tel?`<div class="pad" style="padding-bottom:0" id="wa-notify-wrap"><button class="btn bwa" onclick="avisarEnCamino()"><i class="ti ti-brand-whatsapp"></i>Avisar que estoy en camino</button></div>`:''}
+    ${rem.tel&&!rem.esPrueba?`<div class="pad" style="padding-bottom:0" id="wa-notify-wrap"><button class="btn bwa" onclick="avisarEnCamino()"><i class="ti ti-brand-whatsapp"></i>Avisar que estoy en camino</button></div>`:''}
     <div class="tl" id="tl-entrega">
       <div class="tl-step"><div class="tl-dot tl-done"><i class="ti ti-check"></i></div><span class="tl-lbl">Programado</span></div>
       <div class="tl-line" style="background:var(--green-bd)"></div>
@@ -2319,7 +2385,7 @@ async function confirmarEntrega(){
       }
     }
     const detalle=itemsEstado.map(it=>({id:it.id,estado:it.estado,qty_recibida:it.qtyRecibida,nota:it.nota||'',foto_url:it.fotoUrl||null,foto_sha256:it.fotoSha256||null}));
-    const {error:e1}=await sb.rpc('confirmar_entrega_v27',{p_remito_id:remitoActual.id,p_conformidad:confActual,p_obs:gv('f-obs'),p_receptor_nombre:nombre,p_receptor_dni:dni.replace(/\D/g,''),p_firma_url:firmaUrl,p_firma_sha256:firmaSha256,p_foto_entrega_url:fotoEntregaUrl,p_foto_entrega_sha256:fotoEntregaSha256,p_consent:true,p_items:detalle});
+    const {error:e1}=await rpcVersionado('confirmar_entrega_v210','confirmar_entrega_v27',{p_remito_id:remitoActual.id,p_conformidad:confActual,p_obs:gv('f-obs'),p_receptor_nombre:nombre,p_receptor_dni:dni.replace(/\D/g,''),p_firma_url:firmaUrl,p_firma_sha256:firmaSha256,p_foto_entrega_url:fotoEntregaUrl,p_foto_entrega_sha256:fotoEntregaSha256,p_consent:true,p_items:detalle});
     if(e1)throw e1;
     rpcConfirmada=true;
     await refrescarDatos();
@@ -2373,7 +2439,7 @@ async function guardarManual(){
   let path=null,rpcConfirmada=false;
   try{
     const ev=await subirDataURL(`${cu.empresaId}/manual/${crypto.randomUUID()}.jpg`,manualFoto);path=ev.path;
-    const {error}=await sb.rpc('guardar_remito_manual_v26',{p_num:num,p_fecha:fecha,p_nota:nota,p_foto_url:path,p_foto_sha256:ev.sha256});
+    const {error}=await rpcVersionado('guardar_remito_manual_v210','guardar_remito_manual_v26',{p_num:num,p_fecha:fecha,p_nota:nota,p_foto_url:path,p_foto_sha256:ev.sha256});
     if(error)throw error;
     rpcConfirmada=true;
     await refrescarDatos();
@@ -2402,13 +2468,14 @@ async function bajarPDF(){
     const evidenciasFaltantes=[];
     const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'}),W=210,H=297,m=18,OR=[234,88,12],TX=[23,23,23],GR=[110,110,108],LN=[225,225,223],BG=[248,248,247];
     let y=0;
-    function header(){doc.setFillColor(255,255,255);doc.rect(0,0,W,H,'F');doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(...OR);doc.text('Go',m,18);doc.setTextColor(...TX);doc.text('Remitos',m+doc.getTextWidth('Go'),18);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...GR);doc.text(`Constancia · Remito externo N° ${String(rem.num||'—')}`,W-m,18,{align:'right'});doc.setDrawColor(...LN);doc.line(m,24,W-m,24);y=31;}
+    function header(){doc.setFillColor(255,255,255);doc.rect(0,0,W,H,'F');doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(...OR);doc.text('Go',m,18);doc.setTextColor(...TX);doc.text('Remitos',m+doc.getTextWidth('Go'),18);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...GR);doc.text(`${rem.esPrueba?'PRUEBA INTERNA · ':''}Remito externo N° ${String(rem.num||'—')}`,W-m,18,{align:'right'});doc.setDrawColor(...LN);doc.line(m,24,W-m,24);y=31;}
     function espacio(h){if(y+h>274){doc.addPage();header();}}
     function textoEnvuelto(txt,x,maxW,size=10,style='normal',color=TX){doc.setFont('helvetica',style);doc.setFontSize(size);doc.setTextColor(...color);const lines=doc.splitTextToSize(String(txt||''),maxW),h=Math.max(5,lines.length*(size*.38+1));espacio(h);doc.text(lines,x,y);y+=h;}
     function campo(label,value){if(value===null||value===undefined||value===''||value==='—')return;const lines=doc.splitTextToSize(String(value),W-m*2-40);const h=Math.max(7,lines.length*5);espacio(h);doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...GR);doc.text(label.toUpperCase(),m,y);doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...TX);doc.text(lines,m+40,y);y+=h;}
     function formato(data){if(/^data:image\/png/i.test(data))return 'PNG';if(/^data:image\/webp/i.test(data))return 'WEBP';return 'JPEG';}
     function agregarImagen(data,maxH=55){if(!data)return;const props=doc.getImageProperties(data),maxW=W-m*2-4,ratio=props.width/props.height;let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio;}espacio(h+6);const x=(W-w)/2;doc.setDrawColor(...LN);doc.roundedRect(x-1,y-1,w+2,h+2,1.5,1.5,'S');doc.addImage(data,formato(data),x,y,w,h);y+=h+6;}
     header();
+    if(rem.esPrueba){doc.setDrawColor(...OR);doc.setFillColor(255,247,237);doc.roundedRect(m,y-5,W-m*2,11,2,2,'FD');doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...OR);doc.text('DOCUMENTO DE PRUEBA · NO CORRESPONDE A UNA ENTREGA REAL',W/2,y+1.5,{align:'center'});y+=15;}
     const esManual=rem.estado==='Manual',cf=esManual?'RESPALDO MANUAL':({ok:'CONFORME',disc:'DISCONFORME',rech:'RECHAZADO'}[rem.conformidad]||'PENDIENTE'),cc=esManual?GR:rem.conformidad==='ok'?[22,163,74]:rem.conformidad==='disc'?[220,38,38]:[217,119,6];
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...cc);doc.setDrawColor(...cc);doc.roundedRect(m,y-4.5,doc.getTextWidth(cf)+10,8,1.5,1.5,'S');doc.text(cf,m+5,y+1);y+=12;
     campo('Empresa',rem.snapshot?.empresa?.razon_social||rem.snapshot?.empresa?.nombre||cu.empresaRazonSocial||cu.empresa);campo('CUIT',rem.snapshot?.empresa?.cuit||cu.empresaCuit);campo('Domicilio legal',rem.snapshot?.empresa?.domicilio_privacidad||cu.empresaDomicilioPrivacidad);campo('Privacidad',rem.snapshot?.empresa?.email_privacidad||cu.empresaEmailPrivacidad);campo('Conservación',rem.snapshot?.empresa?.politica_retencion||cu.empresaPoliticaRetencion);campo('Cliente',rem.cliente);campo('Dirección',rem.dir);campo('Contacto',rem.contacto);campo('Fecha prevista',rem.fecha);campo('Inicio del viaje',rem.salidaAt?new Date(rem.salidaAt).toLocaleString('es-AR'):null);campo('Chofer',rem.chofer);campo('Documento original',rem.documentoNombre);campo('Hash documento',rem.documentoSha256);
@@ -2435,8 +2502,8 @@ async function bajarPDF(){
     if(rem.evidenceHash){espacio(18);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GR);doc.text('HASH DE LA CONSTANCIA',m,y);y+=4;textoEnvuelto(rem.evidenceHash,m,W-m*2,6.5,'normal',GR);}
     for(const ev of rem.snapshot?.evidencias||[]){const archivo=ev?.archivo||{};if(!archivo.sha256)continue;espacio(13);textoEnvuelto(`${ev.tipo||'evidencia'}${ev.item_id?' · '+ev.item_id:''}: ${archivo.sha256}`,m,W-m*2,6.2,'normal',GR);}
     if(evidenciasFaltantes.length)throw new Error(`No se generó un comprobante incompleto. No pudimos verificar: ${evidenciasFaltantes.join(', ')}`);
-    const pages=doc.getNumberOfPages();for(let p=1;p<=pages;p++){doc.setPage(p);doc.setDrawColor(...LN);doc.line(m,282,W-m,282);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(`Constancia digital de seguimiento y entrega · Página ${p} de ${pages}`,m,288);doc.text('goremitos.vercel.app',W-m,288,{align:'right'});}
-    doc.save(`constancia-entrega-${String(rem.num||'sin-numero').replace(/[^a-z0-9_-]/gi,'-')}.pdf`);
+    const pages=doc.getNumberOfPages();for(let p=1;p<=pages;p++){doc.setPage(p);doc.setDrawColor(...LN);doc.line(m,282,W-m,282);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(`${rem.esPrueba?'PRUEBA INTERNA · ':''}Constancia digital de seguimiento y entrega · Página ${p} de ${pages}`,m,288);doc.text('goremitos.vercel.app',W-m,288,{align:'right'});}
+    doc.save(`${rem.esPrueba?'PRUEBA-':''}constancia-entrega-${String(rem.num||'sin-numero').replace(/[^a-z0-9_-]/gi,'-')}.pdf`);
   }catch(e){console.error(e);registrarError('generar_pdf',e);alert('No se pudo generar el PDF: '+(e.message||e));}finally{window.__grmPdfBusy=false;document.body.style.cursor='';}
 }
 

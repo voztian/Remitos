@@ -14,7 +14,8 @@ const requeridos=[
   'PRUEBAS-PILOTO-v2.7.md','OPERACION-Y-BACKUPS-v2.7.md','PRIVACIDAD-Y-CONTRATOS-v2.7.md',
   'CAMBIOS-v2.7.md','RESULTADO-VALIDACION-v2.7.md','CHECKSUMS-SHA256.txt',
   'CAMBIOS-v2.8.md','PRUEBAS-ESCRITORIO-v2.8.md','CAMBIOS-v2.9.md','PRUEBAS-DEMO-v2.9.md',
-  'VERSION.txt','tests/verificar-logica-v2.7.mjs'
+  'CAMBIOS-v2.10.md','PRUEBAS-MODO-INTERNO-v2.10.md','supabase-migration-v2.10.sql','supabase-verificacion-v2.10.sql',
+  'VERSION.txt','tests/verificar-logica-v2.7.mjs','tests/verificar-modo-prueba-v2.10.mjs'
 ];
 for(const file of requeridos)assert(fs.existsSync(path.join(root,file)),`Falta ${file}`);
 
@@ -54,7 +55,7 @@ const htmlEstatico=index.slice(0,index.indexOf('<script>'));
 const ids=[...htmlEstatico.matchAll(/\sid="([^"]+)"/g)].map(x=>x[1]);
 assert(new Set(ids).size===ids.length,'Hay IDs HTML estáticos duplicados');
 for(const imagen of htmlEstatico.matchAll(/<img\b[^>]*>/g))assert(/\salt="[^"]*"/.test(imagen[0]),'Hay una imagen estática sin texto alternativo');
-assert(index.includes("const APP_VERSION='2.9.1'"),'Versión web incorrecta');
+assert(index.includes("const APP_VERSION='2.10.0'"),'Versión web incorrecta');
 assert(index.includes('function resumenLocalRemitos()'),'Falta el resumen local del piloto');
 assert(index.includes('if(totalRemitosDisponibles<=remitos.length)'),'El resumen local no evita la consulta opcional');
 assert(index.includes('@media(min-width:900px)'),'Falta el diseño adaptable de escritorio');
@@ -84,15 +85,15 @@ assert(index.includes("extension=punto>0?final.slice(punto).slice(0,12):''"),'Lo
 for(const firma of ['0x25,0x50,0x44,0x46,0x2d','0xff,0xd8,0xff','0x89,0x50,0x4e,0x47','0x52,0x49,0x46,0x46'])assert(index.includes(firma),`Falta validar la firma ${firma}`);
 assert((index.match(/await verificarContenidoDocumento\(/g)||[]).length>=2,'La validación real debe ejecutarse al elegir y al subir');
 assert((index.match(/await documentoBlob\(rem\)/g)||[]).length>=3,'Vista, descarga y constancia deben comprobar el hash del remito externo');
-assert(index.includes("rpc('guardar_remito_v27'"),'La web no exige guardado v2.7');
-assert(index.includes("rpc('marcar_en_camino_v27'"),'La web no registra el inicio del viaje');
-assert(index.includes("rpc('confirmar_entrega_v27'"),'La web no usa el cierre v2.7');
+assert(index.includes("rpcVersionado('guardar_remito_v210','guardar_remito_v27'"),'La web no usa el guardado controlado v2.10');
+assert(index.includes("rpcVersionado('marcar_en_camino_v210','marcar_en_camino_v27'"),'La web no usa el inicio controlado v2.10');
+assert(index.includes("rpcVersionado('confirmar_entrega_v210','confirmar_entrega_v27'"),'La web no usa el cierre controlado v2.10');
 assert(index.includes("rpc('resumen_remitos_v27'"),'La web no usa el resumen v2.7');
 assert(index.includes("rpc('obtener_estado_operativo_v27'"),'La web no muestra la modalidad de infraestructura v2.7');
 assert(index.includes("rpc('actualizar_preparacion_plataforma_v27'"),'La web no guarda la modalidad de infraestructura v2.7');
 assert(index.includes("rpc('registrar_error_cliente_v27'"),'Los diagnósticos todavía se atribuyen a una versión anterior');
 assert(index.includes('id="op-free"'),'Falta la opción explícita de piloto controlado en Free');
-assert(index.includes("rpc('obtener_seguimiento_publico_v27'"),'Falta el seguimiento público');
+assert(index.includes("rpcVersionado('obtener_seguimiento_publico_v210','obtener_seguimiento_publico_v27'"),'Falta el seguimiento público con marca de prueba');
 assert(index.includes("rpc('eliminar_remito_pendiente_v27'"),'Falta el borrado seguro v2.7');
 assert(index.includes('este usuario tiene una entrega en camino'),'La interfaz no explica por qué una baja en viaje queda bloqueada');
 assert(!index.includes("rpc('guardar_remito_v26'"),'La web todavía guarda con v2.6');
@@ -176,4 +177,5 @@ for(const aviso of ['Supabase','Tabler Icons','jsPDF','qrcodejs','Permission is 
 }
 
 await import('./verificar-logica-v2.7.mjs');
-console.log('PAQUETE v2.9 OK: demo aislada, escritorio, sintaxis, archivos, flujo, privacidad, seguridad y secretos públicos');
+await import('./verificar-modo-prueba-v2.10.mjs');
+console.log('PAQUETE v2.10 OK: prueba persistente separada, escritorio, sintaxis, archivos, flujo, privacidad y seguridad');
