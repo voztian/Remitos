@@ -37,7 +37,7 @@ function extraerFuncion(nombre){
 
 const nombres=[
   'documentoMime','documentoNombre','validarDocumento','verificarContenidoDocumento',
-  'js','telWA','claveEstadoVisual','nivelSeguimiento','fechaPublica'
+  'js','telWA','claveEstadoVisual','nivelSeguimiento','fechaPublica','cuitValido'
 ];
 const contexto={Blob,Uint8Array,Error,MAX_DOCUMENTO_BYTES:10*1024*1024};
 vm.createContext(contexto);
@@ -75,5 +75,8 @@ assert(f.claveEstadoVisual({estado:'Pendiente',salidaAt:null})==='Programado','P
 assert(f.claveEstadoVisual({estado:'Pendiente',salidaAt:'2026-09-02T10:00:00Z'})==='EnCamino','Pendiente con salida no es EnCamino');
 assert(f.nivelSeguimiento('Programado')===1&&f.nivelSeguimiento('En camino')===2&&f.nivelSeguimiento('Entregado')===3,'Progreso público incorrecto');
 assert(f.fechaPublica('2026-09-02')==='02/09/2026','Fecha pública incorrecta');
+assert(f.cuitValido('20-12345678-6')===true,'CUIT válido rechazado');
+assert(f.cuitValido('20-12345678-5')===false,'CUIT con dígito verificador incorrecto aceptado');
+assert(f.cuitValido('124565478')===false,'CUIT incompleto aceptado');
 
 console.log('LÓGICA v2.7 OK: archivos, escape, estados, seguimiento y utilidades');

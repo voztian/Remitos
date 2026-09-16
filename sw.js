@@ -1,4 +1,4 @@
-/* GoRemitos v2.8: retira el service worker offline de versiones anteriores. */
+/* GoRemitos v2.9: retira el service worker offline de versiones anteriores. */
 self.addEventListener('install',event=>{
   event.waitUntil(self.skipWaiting());
 });

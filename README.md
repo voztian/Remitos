@@ -1,6 +1,15 @@
-# GoRemitos v2.8 — escritorio adaptable
+# GoRemitos v2.9 — prueba interna guiada
 
-Esta versión conserva completo el circuito seguro de v2.7 y agrega una interfaz realmente adaptada a computadoras, sin quitar la experiencia móvil:
+Esta versión conserva completo el circuito seguro de v2.7 y el escritorio de v2.8, y agrega una prueba interna que permite recorrer la experiencia sin guardar ni transmitir datos:
+
+- El administrador y la oficina pueden simular Programado → En camino → Recepción → Cerrado.
+- La simulación usa sólo datos ficticios y no escribe en Supabase, no sube archivos y no envía mensajes.
+- Los bloqueos de producción se explican por separado y nunca se relajan.
+- El formulario informa inmediatamente cuando no hay choferes activos.
+- Usuarios muestra el estado de disponibilidad de choferes.
+- El CUIT se valida por cantidad de dígitos y dígito verificador.
+
+Además mantiene la interfaz adaptable:
 
 - En pantallas de 900 px o más aparece un menú lateral con textos claros.
 - El dashboard usa el ancho disponible y separa indicadores de actividad reciente.
@@ -20,7 +29,7 @@ El circuito operativo sigue siendo:
 
 ## Qué es y qué no es
 
-GoRemitos v2.8 es una plataforma de seguimiento y constancia digital de entregas asociada a un remito externo.
+GoRemitos v2.9 es una plataforma de seguimiento y constancia digital de entregas asociada a un remito externo.
 
 - No genera numeración fiscal.
 - No solicita CAI/CAE.
@@ -30,7 +39,7 @@ GoRemitos v2.8 es una plataforma de seguimiento y constancia digital de entregas
 
 El archivo descargable que genera GoRemitos dice expresamente **“Constancia digital de seguimiento y entrega”**. No debe presentarse como Remito R ni como factura.
 
-## Actualizar desde v2.7
+## Actualizar desde v2.7 o v2.8
 
 **No tenés que entrar a Supabase ni ejecutar SQL.** La base segura de v2.7 se mantiene sin cambios.
 
@@ -38,12 +47,12 @@ El archivo descargable que genera GoRemitos dice expresamente **“Constancia di
 2. En GitHub, abrí el mismo repositorio `voztian/Remitos` y elegí **Add file → Upload files**.
 3. Subí el contenido descomprimido a la raíz, reemplazando los archivos anteriores. No subas la carpeta contenedora ni el ZIP.
 4. Mantené seleccionada la opción **Commit directly to the main branch**.
-5. Usá como mensaje: `GoRemitos v2.8 - interfaz para escritorio`.
+5. Usá como mensaje: `GoRemitos v2.9 - prueba interna guiada`.
 6. Tocá **Commit changes**.
 7. Esperá a que Vercel muestre el deployment como **Ready / Production / Current**.
 8. Abrí `goremitos.vercel.app` en una pestaña nueva. Si aparece la versión anterior, usá `Ctrl + F5` una vez.
 
-Los archivos SQL v2.7 siguen incluidos sólo como respaldo y trazabilidad. No los vuelvas a ejecutar para instalar v2.8.
+Los archivos SQL v2.7 siguen incluidos sólo como respaldo y trazabilidad. No los vuelvas a ejecutar para instalar v2.9.
 
 ## Qué comprobar después de publicar
 
@@ -55,7 +64,7 @@ Hacé una prueba breve con datos de prueba:
 4. Achicá la ventana por debajo de 900 px: debe volver automáticamente al diseño móvil con menú inferior.
 5. En el celular, confirmá que iniciar con Google y navegar funciona igual que antes.
 
-La lista específica de pantalla está en `PRUEBAS-ESCRITORIO-v2.8.md`. La aceptación funcional completa continúa en `PRUEBAS-PILOTO-v2.7.md` porque la lógica de datos no cambió.
+La simulación se valida con `PRUEBAS-DEMO-v2.9.md`. La lista específica de pantalla continúa en `PRUEBAS-ESCRITORIO-v2.8.md` y la aceptación funcional real en `PRUEBAS-PILOTO-v2.7.md`.
 
 ## Prueba mínima antes de un cliente
 
@@ -112,7 +121,7 @@ La aplicación permite elegir **Supabase Pro** o **Piloto controlado en Free**. 
 
 ## Archivos principales
 
-- `index.html`: aplicación v2.8 adaptable a escritorio y celular.
+- `index.html`: aplicación v2.9 adaptable a escritorio y celular, con prueba interna sin persistencia.
 - `supabase-migration-v2.7.sql`: actualización transaccional desde v2.6.
 - `supabase-finalizar-v2.7.sql`: bloqueo de métodos anteriores después del deployment.
 - `supabase-reversion-emergencia-v2.7.sql`: retorno no destructivo a v2.6 si no hay viajes en curso.
@@ -127,6 +136,8 @@ La aplicación permite elegir **Supabase Pro** o **Piloto controlado en Free**. 
 - `vercel.json` y `_headers`: encabezados de seguridad y caché.
 - `PRUEBAS-ESCRITORIO-v2.8.md`: aceptación visual y responsive de esta versión.
 - `CAMBIOS-v2.8.md`: detalle de la actualización de interfaz.
+- `CAMBIOS-v2.9.md`: detalle de la prueba interna y las mejoras de preparación.
+- `PRUEBAS-DEMO-v2.9.md`: verificación del recorrido ficticio sin datos reales.
 - `tests/verificar-paquete.mjs`: validación local integral; también ejecuta las pruebas de lógica de v2.7.
 
-Los archivos de migraciones anteriores se conservan únicamente para una instalación nueva y para trazabilidad. Una instalación que ya funciona con v2.7 no requiere ningún cambio en Supabase para pasar a v2.8.
+Los archivos de migraciones anteriores se conservan únicamente para una instalación nueva y para trazabilidad. Una instalación que ya funciona con v2.7 no requiere ningún cambio en Supabase para pasar a v2.9.

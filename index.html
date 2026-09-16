@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
 <title>GoRemitos</title>
-<meta name="application-name" content="GoRemitos v2.8">
+<meta name="application-name" content="GoRemitos v2.9">
 <script src="/supabase-2.110.6.min.js"></script>
 <link rel="stylesheet" href="/tabler-icons-3.44.0.min.css">
 <style>
@@ -320,6 +320,27 @@ body{background:var(--page);color:var(--tx)}
 .setup-card h3{font-size:13px;margin:0 0 5px}.setup-card p{font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:12px}
 .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.setup-grid .wide{grid-column:1/-1}
 .warning-box{border:1px solid color-mix(in srgb,var(--amber) 45%,var(--bd));background:color-mix(in srgb,var(--amber) 7%,var(--bg));padding:12px;border-radius:10px;font-size:11px;line-height:1.55;color:var(--tx2)}
+.setup-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.setup-actions .btn{width:auto;min-width:150px;padding:10px 13px;font-size:12px}
+.demo-strip{margin:14px 20px 0;padding:10px 13px;border:1px solid color-mix(in srgb,var(--blue) 42%,var(--bd));border-radius:10px;background:color-mix(in srgb,var(--blue) 7%,var(--bg));display:flex;align-items:center;gap:9px;color:var(--tx2);font-size:11px;line-height:1.45}
+.demo-strip i{font-size:17px;color:var(--blue);flex:none}
+.demo-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px;padding:16px 20px 0}
+.demo-panel{border:1px solid var(--bd);border-radius:12px;background:var(--bg);overflow:hidden}
+.demo-panel-head{padding:14px 16px;border-bottom:1px solid var(--bd-soft);font-size:13px;font-weight:650}
+.demo-step-list{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:14px 20px 0}
+.demo-step{border:1px solid var(--bd);border-radius:9px;padding:8px 6px;text-align:center;color:var(--tx4);font-size:10px;font-weight:600}
+.demo-step.on{border-color:var(--or);color:var(--tx);background:color-mix(in srgb,var(--or) 8%,var(--bg))}
+.demo-step.done{border-color:var(--green-bd);color:var(--green)}
+.demo-item{display:flex;gap:12px;align-items:center;padding:12px 15px;border-bottom:1px solid var(--bd-soft)}
+.demo-item:last-child{border-bottom:0}
+.demo-item-actions{display:flex;gap:6px;margin-left:auto}
+.demo-item-actions .action-btn.selected-ok{border-color:var(--green);color:var(--green)}
+.demo-item-actions .action-btn.selected-miss{border-color:var(--red);color:var(--red)}
+.driver-status{margin:14px 20px 0;padding:12px 14px;border:1px solid var(--bd);border-radius:10px;background:var(--bg-input);font-size:11px;line-height:1.5;color:var(--tx3)}
+.driver-status.ready{border-color:var(--green-bd);color:var(--green)}
+.driver-status.missing{border-color:color-mix(in srgb,var(--amber) 45%,var(--bd));color:var(--amber)}
+.inline-help{font-size:11px;line-height:1.45;margin-top:7px;color:var(--tx3)}
+@media(max-width:760px){.demo-grid{grid-template-columns:1fr;padding:14px 20px 0}.demo-step-list{padding-left:20px;padding-right:20px}.setup-actions .btn{width:100%}.demo-item{align-items:flex-start;flex-wrap:wrap}.demo-item-actions{width:100%;margin-left:0}.demo-item-actions .action-btn{flex:1}}
 .upload-box{border:1px dashed var(--bd);border-radius:11px;padding:14px;background:var(--bg-input);transition:.15s}
 .upload-box:hover{border-color:var(--tx3)}
 .upload-box .upload-title{font-size:12px;font-weight:650;color:var(--tx)}
@@ -399,6 +420,8 @@ body.modal-open{overflow:hidden}
   .screen.active>.tl{margin-left:0;margin-right:0}
   .screen.active>.items{padding-left:0;padding-right:0}
   .dashboard-screen>.warning-box{margin:16px 0 0!important}
+  .demo-screen>.demo-strip,.usuarios-screen>.driver-status{margin:16px 0 0}
+  .demo-screen>.demo-grid{padding:20px 0 0}
   .dashboard-main-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(340px,.82fr);gap:20px;margin-top:20px;align-items:stretch}
   .dashboard-kpis .stats{height:100%;margin:0;border:1px solid var(--bd);border-radius:14px;overflow:hidden;grid-template-columns:repeat(2,minmax(0,1fr))}
   .dashboard-kpis .stat{padding:25px 24px;min-height:132px}
@@ -634,7 +657,7 @@ body.modal-open{overflow:hidden}
 <script src="/qrcode-1.0.0.min.js"></script>
 <script>
 /* ===== SUPABASE ===== */
-const APP_VERSION='2.8.0';
+const APP_VERSION='2.9.0';
 const SUPABASE_URL='https://ospgkovvqqaaebzswngv.supabase.co';
 const SUPABASE_KEY='sb_publishable_Y66zEF0bcef_BRtlbJYIDg_9QrqLiuu';
 const RECOVERY_RETURN=(()=>{const h=new URLSearchParams(window.location.hash.replace(/^#/,'')),q=new URLSearchParams(window.location.search);return h.get('type')==='recovery'||q.get('type')==='recovery';})();
@@ -1110,7 +1133,7 @@ const ST={Firmado:{col:'var(--green)',lbl:'Entregado'},Programado:{col:'var(--bl
 
 let cu=null,usuariosEmpresa=[],accesosEmpresa=[];
 const REM_PAGE=100;
-let remitos=[],resumenRemitos={},totalRemitosDisponibles=0,hayMasRemitos=false,itemsActual=[],itemsEstado=[],firmaData=null,signing=false,confActual=null,remitoActual=null,clockInterval=null,accessCheckInterval=null,idleInterval=null,ultimaActividad=Date.now(),realtimeChannel=null,manualFoto=null,entregaFoto=null,documentoNuevo=null,isOnline=navigator.onLine,filtro='todos',tabActual='',editandoId=null,entregaSeleccionadaId=null,firmaCanvasInicializado=null;
+let remitos=[],resumenRemitos={},totalRemitosDisponibles=0,hayMasRemitos=false,itemsActual=[],itemsEstado=[],firmaData=null,signing=false,confActual=null,remitoActual=null,clockInterval=null,accessCheckInterval=null,idleInterval=null,ultimaActividad=Date.now(),realtimeChannel=null,manualFoto=null,entregaFoto=null,documentoNuevo=null,isOnline=navigator.onLine,filtro='todos',tabActual='',editandoId=null,entregaSeleccionadaId=null,firmaCanvasInicializado=null,demoState=null,demoSigning=false,demoFirmaCanvas=null;
 const tokenObjetivo=new URLSearchParams(window.location.search).get('remito');
 const tokenSeguimiento=(()=>{
   const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
@@ -1168,8 +1191,23 @@ function escAttr(v){return esc(v).replace(/`/g,'&#96;');}
 function js(v){return JSON.stringify(v).replace(/&/g,'\\u0026').replace(/'/g,'\\u0027').replace(/</g,'\\u003c').replace(/>/g,'\\u003e');}
 function soloTelefono(v){return String(v||'').replace(/[^\d+]/g,'');}
 function emailValido(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);}
-function cuitValido(v){return /^\d{11}$/.test(String(v||'').replace(/\D/g,''));}
+function cuitValido(v){
+  const cuit=String(v||'').replace(/\D/g,'');
+  if(!/^\d{11}$/.test(cuit))return false;
+  const pesos=[5,4,3,2,7,6,5,4,3,2];
+  const suma=pesos.reduce((total,peso,i)=>total+Number(cuit[i])*peso,0);
+  const resto=11-(suma%11),verificador=resto===11?0:resto===10?9:resto;
+  return Number(cuit[10])===verificador;
+}
 function empresaListaParaOperar(){return !!cu&&!!cu.empresaRazonSocial&&cuitValido(cu.empresaCuit)&&!!cu.empresaDomicilioPrivacidad&&emailValido(cu.empresaEmailPrivacidad||'')&&String(cu.empresaPoliticaRetencion||'').trim().length>=10;}
+function bloqueosOperacion(){
+  if(!cu)return [];
+  const bloqueos=[];
+  if(!empresaListaParaOperar())bloqueos.push({id:'empresa',texto:'datos legales y política de conservación de la empresa'});
+  if(cu.adminPlataforma&&(!configPublica.responsable_nombre||!configPublica.responsable_domicilio||!configPublica.privacidad_email||!configPublica.soporte_email))bloqueos.push({id:'plataforma',texto:'datos del responsable de GoRemitos'});
+  if(!cu.plataformaListaPiloto)bloqueos.push({id:'piloto',texto:'preparación técnica del piloto'});
+  return bloqueos;
+}
 function exigirPreparacionOperativa(){
   if(!cu?.plataformaListaPiloto){alert('El piloto todavía no está habilitado. El responsable de GoRemitos debe completar y verificar la preparación operativa.');return false;}
   if(!empresaListaParaOperar()){alert('Antes de operar con datos reales, un administrador debe completar los datos legales y la política de conservación de la empresa en Usuarios.');return false;}
@@ -1379,7 +1417,7 @@ function buildNav(){
     ?`<button type="button" class="bn-plus" id="bn-nuevo" onclick="goTab('nuevo')" aria-label="Crear nuevo remito"><i class="ti ti-plus" aria-hidden="true"></i><span class="bn-plus-label">Nuevo remito</span></button>`
     :`<button type="button" class="bn-item" id="bn-${it.id}" onclick="goTab('${it.id}')"><i class="ti ${it.ico}"></i><span>${it.lbl}</span></button>`
   ).join('');
-  document.getElementById('bnav').innerHTML=`<div class="desktop-nav-head"><div class="desktop-nav-logo"><b>Go</b>Remitos</div><div class="desktop-nav-kicker">${esc(cu.empresa)} · ${esc(ROL_LBL[cu.rol]||cu.rol)}</div></div><div class="desktop-nav-menu">${botones}</div><div class="desktop-nav-foot"><span>GoRemitos 2.8</span><span>Seguimiento y constancias</span></div>`;
+  document.getElementById('bnav').innerHTML=`<div class="desktop-nav-head"><div class="desktop-nav-logo"><b>Go</b>Remitos</div><div class="desktop-nav-kicker">${esc(cu.empresa)} · ${esc(ROL_LBL[cu.rol]||cu.rol)}</div></div><div class="desktop-nav-menu">${botones}</div><div class="desktop-nav-foot"><span>GoRemitos 2.9</span><span>Seguimiento y constancias</span></div>`;
   goTab(HOME[cu.rol]);
   if(tokenObjetivo){
     const r=remitos.find(x=>String(x.publicToken)===String(tokenObjetivo));
@@ -1388,6 +1426,7 @@ function buildNav(){
 }
 function goTab(id){
   const permitidos=(NAV[cu.rol]||[]).map(x=>x.id).concat((NAV[cu.rol]||[]).some(x=>x.plus)?['nuevo']:[]);
+  if(id==='demo'&&['admin','oficina'].includes(cu.rol))permitidos.push('demo');
   if(!permitidos.includes(id))id=HOME[cu.rol];
   tabActual=id;
   if(id==='entrega'){entregaSeleccionadaId=null;resetEntregaState();}
@@ -1395,10 +1434,11 @@ function goTab(id){
   const b=document.getElementById('bn-'+id);if(b)b.classList.add('active');
   const el=document.getElementById('main-content');
   if(cargaRemitosError&&id!=='usuarios'){el.innerHTML=renderErrorCarga();return;}
-  const fns={dash:renderDash,remitos:renderRemitos,usuarios:renderUsuarios,nuevo:renderNuevo,entrega:renderEntrega,manual:renderManual,historial:renderHistorial};
+  const fns={dash:renderDash,remitos:renderRemitos,usuarios:renderUsuarios,nuevo:renderNuevo,entrega:renderEntrega,manual:renderManual,historial:renderHistorial,demo:renderDemo};
   el.innerHTML=(fns[id]||renderDash)();
   asociarEtiquetas(el);
   if(id==='nuevo')setTimeout(initNuevoForm,0);
+  if(id==='demo'&&demoState?.etapa==='recepcion')setTimeout(initDemoFirma,50);
   if(id==='manual')manualFoto=null;
   if(id==='usuarios')setTimeout(cargarDatosUsuarios,50);
   window.scrollTo(0,0);
@@ -1409,10 +1449,11 @@ function renderDash(){
   const tot=Number(resumenRemitos.total??totalRemitosDisponibles??remitos.length),ent=Number(resumenRemitos.entregados??remitos.filter(r=>['Firmado','Disconforme','Rechazado'].includes(r.estado)).length),disc=Number(resumenRemitos.con_problemas??remitos.filter(r=>r.estado==='Disconforme'||r.estado==='Rechazado').length),prog=Number(resumenRemitos.programados??remitos.filter(r=>r.estado==='Pendiente'&&!r.salidaAt).length),camino=Number(resumenRemitos.en_camino??remitos.filter(r=>r.estado==='Pendiente'&&r.salidaAt).length);
   const pct=tot?Math.round(ent/tot*1000)/10:0;
   const now=new Date();
-  const legalIncompleto=cu.rol==='admin'&&!empresaListaParaOperar();
-  const plataformaIncompleta=cu.adminPlataforma&&(!configPublica.responsable_nombre||!configPublica.responsable_domicilio||!configPublica.privacidad_email||!configPublica.soporte_email);
-  const pilotoIncompleto=!cu.plataformaListaPiloto;
-  const avisoConfig=legalIncompleto||plataformaIncompleta||pilotoIncompleto?`<div class="warning-box" style="margin:14px 20px 0"><strong>Operación real bloqueada.</strong> Falta completar ${[legalIncompleto?'los datos legales y conservación de la empresa':'',plataformaIncompleta?'el responsable de GoRemitos':'',pilotoIncompleto?'la lista de preparación del piloto':''].filter(Boolean).join(', ')}. ${cu.rol==='admin'?'<button type="button" class="link-btn" onclick="goTab(\'usuarios\')">Resolver ahora</button>':'Contactá a un administrador.'}</div>`:'';
+  const bloqueos=cu.rol==='admin'?bloqueosOperacion():[];
+  const detalleBloqueos=bloqueos.map(x=>x.texto).join(', ');
+  const puedeConfigurar=bloqueos.some(x=>x.id==='empresa'||(x.id==='plataforma'&&cu.adminPlataforma));
+  const esperaResponsable=bloqueos.some(x=>x.id==='piloto')&&!cu.adminPlataforma;
+  const avisoConfig=bloqueos.length?`<div class="warning-box" style="margin:14px 20px 0"><strong>Operación real bloqueada.</strong> Falta completar ${esc(detalleBloqueos)}.${esperaResponsable?' La habilitación técnica sólo puede confirmarla el responsable de GoRemitos.':''}<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar circuito sin guardar</button>${puedeConfigurar?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')"><i class="ti ti-settings"></i>Configurar operación real</button>':''}</div></div>`:'';
   const act=remitos.slice(0,5).map(r=>{
     const s=estadoVisual(r);
     const hora=r.tsFirma||r.ts?new Date(r.tsFirma||r.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
@@ -1437,6 +1478,72 @@ function renderDash(){
     <div class="dashboard-activity"><div class="sechead"><span class="t">Actividad reciente</span><button type="button" class="link-btn" onclick="goTab('remitos')">Ver todo</button></div>
     ${act||empty('ti-inbox','No hay remitos aún','Creá el primero con Nuevo remito')}</div></div>
   </div>`;
+}
+
+/* ===== PRUEBA INTERNA SIN DATOS REALES ===== */
+function crearDemoState(){
+  return {
+    etapa:'programado',numero:'DEMO-0001',cliente:'Cliente de prueba',direccion:'Av. Corrientes 1234, CABA',chofer:'Chofer de prueba',
+    creadoAt:new Date().toISOString(),salidaAt:null,cierreAt:null,receptor:'Receptor de prueba',dni:'00000000',firma:null,
+    items:[
+      {codigo:'LAT-20',descripcion:'Látex interior 20 L',cantidad:2,estado:null},
+      {codigo:'ROD-22',descripcion:'Rodillo profesional 22 cm',cantidad:3,estado:null}
+    ]
+  };
+}
+function iniciarDemo(){
+  demoState=crearDemoState();demoFirmaCanvas=null;goTab('demo');
+}
+function salirDemo(){demoState=null;demoFirmaCanvas=null;goTab('dash');}
+function demoEtapaIndice(){return {programado:0,en_camino:1,recepcion:2,cerrado:3}[demoState?.etapa]??0;}
+function demoRerender(){
+  const el=document.getElementById('main-content');if(!el)return;
+  tabActual='demo';el.innerHTML=renderDemo();asociarEtiquetas(el);
+  if(demoState?.etapa==='recepcion'&&demoState.items.every(x=>x.estado))setTimeout(initDemoFirma,50);
+  window.scrollTo(0,0);
+}
+function demoAvanzar(etapa){
+  if(!demoState)demoState=crearDemoState();
+  if(etapa==='en_camino')demoState.salidaAt=new Date().toISOString();
+  demoState.etapa=etapa;demoRerender();
+}
+function demoMarcarItem(indice,estado){
+  if(!demoState?.items?.[indice])return;
+  demoState.items[indice].estado=estado;demoRerender();
+}
+function demoCampo(campo,valor){if(demoState&&['receptor','dni'].includes(campo))demoState[campo]=String(valor||'').slice(0,campo==='dni'?12:100);}
+function demoFinalizar(){
+  if(!demoState||!demoState.items.every(x=>x.estado)){alert('Revisá todos los ítems de la entrega de prueba.');return;}
+  if(!demoState.receptor.trim()||!/^\d{7,8}$/.test(demoState.dni.replace(/\D/g,''))){alert('Revisá los datos ficticios del receptor.');return;}
+  if(!demoState.firma){alert('Hacé una firma de prueba en el recuadro.');return;}
+  demoState.cierreAt=new Date().toISOString();demoState.etapa='cerrado';demoRerender();
+}
+function initDemoFirma(){
+  const canvas=document.getElementById('demo-sign');if(!canvas||demoFirmaCanvas===canvas)return;demoFirmaCanvas=canvas;
+  const ancho=canvas.parentElement.offsetWidth;if(ancho>0){canvas.width=ancho;canvas.height=110;}
+  const ctx=canvas.getContext('2d');ctx.strokeStyle='#111';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  if(demoState?.firma){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=demoState.firma;}
+  const punto=e=>{const r=canvas.getBoundingClientRect(),sx=canvas.width/r.width,sy=canvas.height/r.height,t=e.touches?.[0];return{x:((t?.clientX??e.clientX)-r.left)*sx,y:((t?.clientY??e.clientY)-r.top)*sy};};
+  const iniciar=e=>{if(e.cancelable)e.preventDefault();demoSigning=true;ctx.beginPath();const p=punto(e);ctx.moveTo(p.x,p.y);};
+  const mover=e=>{if(!demoSigning)return;if(e.cancelable)e.preventDefault();const p=punto(e);ctx.lineTo(p.x,p.y);ctx.stroke();demoState.firma=canvas.toDataURL();const h=document.getElementById('demo-sign-hint');if(h)h.style.opacity='0';};
+  const terminar=()=>{demoSigning=false;};
+  canvas.addEventListener('mousedown',iniciar);canvas.addEventListener('mousemove',mover);canvas.addEventListener('mouseup',terminar);canvas.addEventListener('mouseleave',terminar);
+  canvas.addEventListener('touchstart',iniciar,{passive:false});canvas.addEventListener('touchmove',mover,{passive:false});canvas.addEventListener('touchend',terminar);
+}
+function limpiarDemoFirma(){
+  if(!demoState)return;demoState.firma=null;const canvas=document.getElementById('demo-sign');canvas?.getContext('2d').clearRect(0,0,canvas.width,canvas.height);const h=document.getElementById('demo-sign-hint');if(h)h.style.opacity='1';
+}
+function renderDemo(){
+  if(!demoState)demoState=crearDemoState();
+  const paso=demoEtapaIndice(),todos=demoState.items.every(x=>x.estado);
+  const pasos=['Programado','En camino','Recepción','Cerrado'].map((nombre,i)=>`<div class="demo-step ${i<paso?'done':i===paso?'on':''}">${i<paso?'<i class="ti ti-check"></i> ':''}${nombre}</div>`).join('');
+  const listaItems=demoState.items.map((it,i)=>`<div class="demo-item"><div style="flex:1;min-width:180px"><div style="font-size:12px;font-weight:650">${esc(it.descripcion)}</div><div class="sub tnum">${esc(it.codigo)} · ${esc(it.cantidad)} unidades</div></div>${demoState.etapa==='recepcion'?`<div class="demo-item-actions"><button type="button" class="action-btn ${it.estado==='ok'?'selected-ok':''}" onclick="demoMarcarItem(${i},'ok')">Completo</button><button type="button" class="action-btn ${it.estado==='miss'?'selected-miss':''}" onclick="demoMarcarItem(${i},'miss')">Con faltante</button></div>`:`<span class="status"><span class="st-dot" style="background:${it.estado==='miss'?'var(--red)':it.estado==='ok'?'var(--green)':'var(--blue)'}"></span>${it.estado==='miss'?'Con faltante':it.estado==='ok'?'Completo':'Pendiente'}</span>`}</div>`).join('');
+  let accion='';
+  if(demoState.etapa==='programado')accion=`<button type="button" class="btn bo" onclick="demoAvanzar('en_camino')"><i class="ti ti-truck-delivery"></i>Iniciar viaje de prueba</button>`;
+  if(demoState.etapa==='en_camino')accion=`<div class="warning-box" style="margin-bottom:12px"><strong>Vista pública simulada:</strong> el destinatario vería “En camino” y el horario, pero nunca el documento, el DNI, la firma ni las fotos.</div><button type="button" class="btn bo" onclick="demoAvanzar('recepcion')"><i class="ti ti-map-pin-check"></i>Simular llegada al destino</button>`;
+  if(demoState.etapa==='recepcion')accion=`<div style="font-size:12px;color:var(--tx3);line-height:1.5;margin-bottom:12px">Marcá cada ítem como completo o con faltante. Cuando termines aparecerá la firma de prueba.</div>${todos?`<div class="row2"><div class="field"><label>Receptor ficticio</label><input id="demo-receptor" value="${escAttr(demoState.receptor)}" oninput="demoCampo('receptor',this.value)"></div><div class="field"><label>DNI ficticio</label><input id="demo-dni" inputmode="numeric" value="${escAttr(demoState.dni)}" oninput="demoCampo('dni',this.value)"></div></div><div class="sign-wrap" style="margin:2px 0 8px"><canvas id="demo-sign" width="390" height="110"></canvas><div class="sign-hint" id="demo-sign-hint" style="${demoState.firma?'opacity:0':''}">Firma de prueba</div></div><div class="stbar"><button type="button" class="bgh" onclick="limpiarDemoFirma()">Borrar firma</button><span class="sok">No se guarda</span></div><button type="button" class="btn bo" style="margin-top:12px" onclick="demoFinalizar()"><i class="ti ti-signature"></i>Cerrar entrega simulada</button>`:''}`;
+  if(demoState.etapa==='cerrado')accion=`<div class="banner" style="margin:0 0 12px"><i class="ti ti-circle-check" style="color:var(--green);font-size:28px"></i><div class="banner-tit">Prueba completada</div><div class="banner-sub">Recorriste creación, salida, seguimiento, recepción y cierre sin guardar información.</div></div><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-refresh"></i>Repetir prueba</button>`;
+  return `<div class="screen active demo-screen"><div class="pagehead"><div class="tit">Prueba interna del circuito</div><div class="sub">Datos totalmente ficticios · no se escribe en Supabase</div></div><div class="demo-strip"><i class="ti ti-flask"></i><div><strong>Modo simulación.</strong> No crea remitos, no sube archivos, no envía mensajes y no modifica usuarios.</div></div><div class="demo-step-list">${pasos}</div><div class="demo-grid"><div class="demo-panel"><div class="demo-panel-head">Remito externo ficticio</div><div class="crow"><i class="ti ti-file-description"></i><div><div class="cl">Documento</div><div class="cv">remito-demo.pdf · N° ${esc(demoState.numero)}</div></div></div><div class="crow"><i class="ti ti-building-store"></i><div><div class="cl">Cliente</div><div class="cv">${esc(demoState.cliente)}</div></div></div><div class="crow"><i class="ti ti-map-pin"></i><div><div class="cl">Destino</div><div class="cv">${esc(demoState.direccion)}</div></div></div><div class="crow"><i class="ti ti-user"></i><div><div class="cl">Chofer</div><div class="cv">${esc(demoState.chofer)}</div></div></div><div class="sechead"><span class="t">Mercadería</span></div>${listaItems}</div><div class="demo-panel"><div class="demo-panel-head">Acción actual</div><div class="pad">${accion}<button type="button" class="btn bl" style="margin-top:10px" onclick="salirDemo()">Salir de la prueba</button></div></div></div></div>`;
 }
 
 /* ===== REMITOS ===== */
@@ -1573,6 +1680,7 @@ async function cargarEventosRemito(id){
 function renderUsuarios(){
   return `<div class="screen active usuarios-screen">
     <div class="pagehead"><div class="tit">Usuarios</div><div class="sub">Accesos de ${esc(cu.empresa)}</div></div>
+    <div id="usr-driver-status" class="driver-status">Comprobando si hay choferes activos…</div>
     <div class="users-grid"><div class="users-settings">
     <div class="setup-card">
       <h3>Datos legales de la empresa</h3>
@@ -1678,7 +1786,7 @@ async function guardarPreparacionPlataforma(){
 async function guardarDatosLegalesEmpresa(){
   if(!requireOnline())return;
   const razon=gv('empresa-razon'),cuit=gv('empresa-cuit').replace(/\D/g,''),dom=gv('empresa-domicilio'),email=gv('empresa-priv-email').toLowerCase(),tel=gv('empresa-priv-tel'),retencion=gv('empresa-retencion');
-  if(razon.length<2||!cuitValido(cuit)||dom.length<5||!emailValido(email)||retencion.length<10){showErr('empresa-legal-error','Completá razón social, CUIT de 11 dígitos, domicilio, email y política de conservación.');return;}
+  if(razon.length<2||!cuitValido(cuit)||dom.length<5||!emailValido(email)||retencion.length<10){showErr('empresa-legal-error','Completá razón social, CUIT válido de 11 dígitos, domicilio, email y política de conservación.');return;}
   const btn=document.getElementById('empresa-legal-save');setBusy(btn,true,'Guardando...');
   const {error}=await sb.rpc('actualizar_datos_legales_empresa',{p_razon_social:razon,p_cuit:cuit,p_domicilio:dom,p_email:email,p_telefono:tel||null,p_politica_retencion:retencion});
   setBusy(btn,false,'Guardar datos legales');if(error){showErr('empresa-legal-error',error.message);return;}
@@ -1766,6 +1874,8 @@ async function cargarDatosUsuarios(){
   const pl=document.getElementById('usr-pendientes');
   if(pl)pl.innerHTML=pendientes.map(tarjetaAutorizacionPendiente).join('');
   if(lista)lista.innerHTML=activos.map(tarjetaUsuarioActivo).join('')||empty('ti-users','No hay usuarios activos','Autorizá el primer email para comenzar.');
+  const choferes=activos.filter(a=>a.rol==='chofer'),estadoChofer=document.getElementById('usr-driver-status');
+  if(estadoChofer){estadoChofer.className=`driver-status ${choferes.length?'ready':'missing'}`;estadoChofer.innerHTML=choferes.length?`<strong>${choferes.length} chofer${choferes.length>1?'es':''} activo${choferes.length>1?'s':''}.</strong> Ya podés asignar entregas.`:'<strong>Falta un chofer activo.</strong> Cambiá el rol de un usuario existente a Chofer o autorizá un nuevo email con ese rol.';}
   if(cu.adminPlataforma)await Promise.all([cargarAltasEmpresa(),cargarErroresRecientes(),cargarEstadoOperativo()]);
 }
 async function autorizarEmailUsuario(){
@@ -1833,14 +1943,16 @@ async function compartirAccesoAutorizado(id){
 /* ===== NUEVO ===== */
 function renderNuevo(){
   const editando=editandoId!==null;
+  const bloqueos=bloqueosOperacion(),operacionLista=bloqueos.length===0;
   return `<div class="screen active new-screen"><div id="nv-form">
     <div class="pagehead"><div class="tit">${editando?'Editar entrega programada':'Programar entrega'}</div><div class="sub">${editando?'Sólo puede modificarse antes de iniciar el viaje':'Adjuntá el remito emitido por tu empresa y asigná el viaje'}</div></div>
+    ${!operacionLista?`<div class="warning-box" style="margin:14px 20px 0"><strong>Todavía no se puede guardar una entrega real.</strong> Falta ${esc(bloqueos.map(x=>x.texto).join(', '))}. Podés recorrer el circuito completo sin guardar información.<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar sin guardar</button>${cu.rol==='admin'?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')">Revisar configuración</button>':''}</div></div>`:''}
     <div class="pad">
     <div class="row2"><div class="field"><label>N° remito *</label><input id="f-num" placeholder="0001" type="text" maxlength="50"></div><div class="field"><label>Fecha *</label><input id="f-fecha" type="date" value="${hoy()}"></div></div>
     <div class="field"><label>Cliente *</label><input id="f-cli" placeholder="Nombre o empresa" type="text" maxlength="160"></div>
     <div class="field"><label>Dirección *</label><input id="f-dir" placeholder="Av. Corrientes 1234, CABA" type="text" maxlength="250"></div>
     <div class="row2"><div class="field"><label>Contacto</label><input id="f-cont" placeholder="Receptor" type="text" maxlength="100"></div><div class="field"><label>Teléfono</label><input id="f-tel" placeholder="11 1234-5678" type="text" maxlength="30" inputmode="tel"></div></div>
-    <div class="field"><label>Chofer asignado *</label><select id="f-chofer" disabled><option value="">Cargando choferes...</option></select></div>
+    <div class="field"><label>Chofer asignado *</label><select id="f-chofer" disabled><option value="">Cargando choferes...</option></select><div class="inline-help" id="f-chofer-ayuda"></div></div>
     <div class="field"><label>Remito original *</label>
       <div class="upload-box">
         <div class="upload-title">Documento emitido por la empresa</div>
@@ -1855,7 +1967,7 @@ function renderNuevo(){
       <div id="items-wrap"></div>
       <button class="btn bl" style="margin-top:6px;padding:10px;font-size:12px" onclick="addItem()"><i class="ti ti-plus" style="font-size:13px"></i>Agregar ítem</button>
     </div>
-    <button class="btn bp" id="btn-guardar-remito" style="margin-top:6px" onclick="guardarRemito()">${editando?'Guardar cambios':'Programar entrega'}<i class="ti ti-arrow-right"></i></button>
+    <button class="btn bp" id="btn-guardar-remito" style="margin-top:6px" onclick="guardarRemito()" ${!operacionLista?'disabled title="Completá la configuración o usá la prueba sin guardar"':''}>${editando?'Guardar cambios':'Programar entrega'}<i class="ti ti-arrow-right"></i></button>
     ${editando?`<button class="btn bl" style="margin-top:8px" onclick="cancelarEdicion()">Cancelar edición</button>`:''}
     </div>
   </div>
@@ -1898,10 +2010,12 @@ async function handleDocumentoNuevo(input){
 }
 function quitarDocumentoNuevo(){documentoNuevo=null;const input=document.getElementById('f-documento');if(input)input.value='';renderDocumentoFormulario(editandoId!==null?remitos.find(x=>String(x.id)===String(editandoId)):null);}
 async function cargarChoferes(seleccionado=''){
-  const select=document.getElementById('f-chofer');if(!select)return;
+  const select=document.getElementById('f-chofer'),ayuda=document.getElementById('f-chofer-ayuda');if(!select)return;
   const {data,error}=await sb.from('perfiles').select('id,nombre,rol,activo').eq('empresa_id',cu.empresaId).eq('rol','chofer').eq('activo',true).order('nombre');
-  if(error){select.innerHTML='<option value="">No se pudieron cargar</option>';return;}
-  usuariosEmpresa=data||[];select.innerHTML='<option value="">Seleccioná un chofer</option>'+usuariosEmpresa.map(u=>`<option value="${escAttr(u.id)}" ${String(u.id)===String(seleccionado)?'selected':''}>${esc(u.nombre)}</option>`).join('');select.disabled=false;
+  if(error){select.innerHTML='<option value="">No se pudieron cargar</option>';if(ayuda)ayuda.textContent='No se pudo consultar la lista. Recargá o revisá la conexión.';return;}
+  usuariosEmpresa=data||[];
+  if(!usuariosEmpresa.length){select.innerHTML='<option value="">No hay choferes activos</option>';select.disabled=true;if(ayuda)ayuda.innerHTML=cu.rol==='admin'?'Necesitás al menos un usuario con rol Chofer. <button type="button" class="link-btn" onclick="goTab(\'usuarios\')">Ir a Usuarios</button>':'Pedile a un administrador que habilite un chofer.';return;}
+  select.innerHTML='<option value="">Seleccioná un chofer</option>'+usuariosEmpresa.map(u=>`<option value="${escAttr(u.id)}" ${String(u.id)===String(seleccionado)?'selected':''}>${esc(u.nombre)}</option>`).join('');select.disabled=false;if(ayuda)ayuda.textContent=`${usuariosEmpresa.length} chofer${usuariosEmpresa.length>1?'es':''} disponible${usuariosEmpresa.length>1?'s':''}.`;
 }
 function initItems(){itemsActual=[{id:crypto.randomUUID(),cod:'',qty:'',desc:''}];renderItemsForm();}
 function addItem(){itemsActual.push({id:crypto.randomUUID(),cod:'',qty:'',desc:''});renderItemsForm();}

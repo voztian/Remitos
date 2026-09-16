@@ -13,7 +13,7 @@ const requeridos=[
   'supabase-reversion-emergencia-v2.7.sql','supabase-verificacion-v2.7.sql','README.md',
   'PRUEBAS-PILOTO-v2.7.md','OPERACION-Y-BACKUPS-v2.7.md','PRIVACIDAD-Y-CONTRATOS-v2.7.md',
   'CAMBIOS-v2.7.md','RESULTADO-VALIDACION-v2.7.md','CHECKSUMS-SHA256.txt',
-  'CAMBIOS-v2.8.md','PRUEBAS-ESCRITORIO-v2.8.md',
+  'CAMBIOS-v2.8.md','PRUEBAS-ESCRITORIO-v2.8.md','CAMBIOS-v2.9.md','PRUEBAS-DEMO-v2.9.md',
   'VERSION.txt','tests/verificar-logica-v2.7.mjs'
 ];
 for(const file of requeridos)assert(fs.existsSync(path.join(root,file)),`Falta ${file}`);
@@ -54,13 +54,25 @@ const htmlEstatico=index.slice(0,index.indexOf('<script>'));
 const ids=[...htmlEstatico.matchAll(/\sid="([^"]+)"/g)].map(x=>x[1]);
 assert(new Set(ids).size===ids.length,'Hay IDs HTML estáticos duplicados');
 for(const imagen of htmlEstatico.matchAll(/<img\b[^>]*>/g))assert(/\salt="[^"]*"/.test(imagen[0]),'Hay una imagen estática sin texto alternativo');
-assert(index.includes("const APP_VERSION='2.8.0'"),'Versión web incorrecta');
+assert(index.includes("const APP_VERSION='2.9.0'"),'Versión web incorrecta');
 assert(index.includes('@media(min-width:900px)'),'Falta el diseño adaptable de escritorio');
 assert(index.includes('grid-template-columns:244px minmax(0,1fr)'),'Falta la estructura principal con menú lateral');
 assert(index.includes('class="desktop-nav-menu"'),'Falta el menú lateral de escritorio');
 assert(index.includes('class="dashboard-main-grid"'),'Falta la distribución de escritorio del dashboard');
 assert(index.includes('class="users-grid"'),'Falta la distribución de escritorio de usuarios');
 assert(index.includes("document.body.classList.toggle('app-shell-visible',id==='view-app')"),'La vista de aplicación no activa su estructura responsive');
+assert(!index.includes('document.body.className=t'),'Cambiar el tema todavía elimina el estado de la vista de escritorio');
+assert(index.includes("document.body.classList.toggle('dark',t==='dark')"),'El tema no conserva las demás clases de la aplicación');
+assert(index.includes('function iniciarDemo()'),'Falta iniciar la prueba interna');
+assert(index.includes('function renderDemo()'),'Falta la pantalla de prueba interna');
+assert(index.includes('Datos totalmente ficticios · no se escribe en Supabase'),'La prueba no aclara su aislamiento');
+assert(index.includes('No crea remitos, no sube archivos, no envía mensajes y no modifica usuarios.'),'La prueba no delimita sus efectos');
+assert(index.includes('No hay choferes activos'),'El formulario no explica la falta de choferes');
+assert(index.includes('id="usr-driver-status"'),'Usuarios no muestra el estado de choferes');
+assert(index.includes('const pesos=[5,4,3,2,7,6,5,4,3,2]'),'El CUIT no valida el dígito verificador');
+const demo=index.slice(index.indexOf('/* ===== PRUEBA INTERNA SIN DATOS REALES ===== */'),index.indexOf('/* ===== REMITOS ===== */'));
+assert(demo.length>500,'No se pudo aislar el módulo de prueba interna');
+for(const prohibido of ['sb.','fetch(','storage.','.rpc(','window.open(','navigator.share'])assert(!demo.includes(prohibido),`La prueba interna contiene una salida externa: ${prohibido}`);
 assert(index.includes('const contextoVersionado=`v${APP_VERSION}:'),'Los errores no identifican la versión de interfaz');
 assert(index.includes("const BUCKET_DOCUMENTOS='documentos-remito'"),'Falta el bucket privado de documentos');
 assert(index.includes('MAX_DOCUMENTO_BYTES=10*1024*1024'),'Falta el límite de 10 MB del documento');
@@ -162,4 +174,4 @@ for(const aviso of ['Supabase','Tabler Icons','jsPDF','qrcodejs','Permission is 
 }
 
 await import('./verificar-logica-v2.7.mjs');
-console.log('PAQUETE v2.8 OK: escritorio, sintaxis, archivos, flujo, privacidad, seguridad y secretos públicos');
+console.log('PAQUETE v2.9 OK: demo aislada, escritorio, sintaxis, archivos, flujo, privacidad, seguridad y secretos públicos');
