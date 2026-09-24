@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const files=execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);
+const rows=[...new Set(files)].filter(f=>f!=='CHECKSUMS-SHA256.txt'&&!f.startsWith('GoRemitos-v2.3-recuperacion/')&&fs.existsSync(path.join(root,f))).sort().map(file=>`${crypto.createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex')}  ${file}`);
+fs.writeFileSync(path.join(root,'CHECKSUMS-SHA256.txt'),rows.join('\n')+'\n');
+console.log(`Integridad actualizada: ${rows.length} archivos.`);

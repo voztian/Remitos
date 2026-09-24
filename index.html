@@ -661,7 +661,7 @@ body.modal-open{overflow:hidden}
 <script src="/qrcode-1.0.0.min.js"></script>
 <script>
 /* ===== SUPABASE ===== */
-const APP_VERSION='2.10.0';
+const APP_VERSION='2.11.0';
 const SUPABASE_URL='https://ospgkovvqqaaebzswngv.supabase.co';
 const SUPABASE_KEY='sb_publishable_Y66zEF0bcef_BRtlbJYIDg_9QrqLiuu';
 const RECOVERY_RETURN=(()=>{const h=new URLSearchParams(window.location.hash.replace(/^#/,'')),q=new URLSearchParams(window.location.search);return h.get('type')==='recovery'||q.get('type')==='recovery';})();
@@ -916,24 +916,42 @@ function cargarJsPDF(){
   if(window.jspdf?.jsPDF)return Promise.resolve();if(jspdfPromise)return jspdfPromise;
   jspdfPromise=new Promise((resolve,reject)=>{
     const s=document.createElement('script');s.src='/jspdf-4.2.1.umd.min.js';s.onload=()=>window.jspdf?.jsPDF?resolve():reject(new Error('La librería PDF no quedó disponible'));s.onerror=()=>reject(new Error('No se pudo cargar el generador de PDF'));document.head.appendChild(s);
-  });return jspdfPromise;
+  }).catch(error=>{jspdfPromise=null;throw error;});return jspdfPromise;
 }
 
+let modoConsultaPromesa=null;
 async function cargarModoPruebaEmpresa(){
   if(!cu||!sb)return false;
-  const {data,error}=await sb.rpc('obtener_modo_prueba_empresa_v210');
-  if(error){
-    cu.modoPruebaDisponible=false;cu.modoPruebaInterna=false;cu.remitosPruebaPendientes=0;cu.remitosPruebaTotal=0;
-    console.error('modo-prueba',error);return false;
-  }
-  const estado=Array.isArray(data)?data[0]:data;
-  cu.modoPruebaDisponible=true;
-  cu.modoPruebaInterna=estado?.modo_prueba_interna===true;
-  cu.remitosPruebaPendientes=Number(estado?.remitos_prueba_pendientes||0);
-  cu.remitosPruebaTotal=Number(estado?.remitos_prueba_total||0);
-  cu.plataformaRealLista=estado?.plataforma_real_lista===true;
-  cu.empresaRealLista=estado?.empresa_real_lista===true;
-  return true;
+  if(modoConsultaPromesa?.usuario===cu)return modoConsultaPromesa.promesa;
+  const usuario=cu;
+  const promesa=(async()=>{
+    try{
+      const {data,error}=await sb.rpc('obtener_modo_prueba_empresa_v210');
+      if(cu!==usuario)return false;
+      if(error)throw error;
+      const estado=Array.isArray(data)?data[0]:data;
+      if(typeof estado?.modo_prueba_interna!=='boolean')throw new Error('No se recibió el estado de la empresa.');
+      Object.assign(usuario,{
+        modoPruebaDisponible:true,modoPruebaEstado:'ok',
+        modoPruebaInterna:estado.modo_prueba_interna,
+        remitosPruebaPendientes:Number(estado.remitos_prueba_pendientes||0),
+        remitosPruebaTotal:Number(estado.remitos_prueba_total||0),
+        plataformaRealLista:estado.plataforma_real_lista===true,
+        plataformaListaPiloto:estado.plataforma_real_lista===true,
+        empresaRealLista:estado.empresa_real_lista===true
+      });
+      return true;
+    }catch(error){
+      if(cu!==usuario)return false;
+      // Un fallo de red no es un cambio de modo. Conservamos el formulario y
+      // el último valor conocido, pero impedimos nuevas escrituras hasta revalidar.
+      usuario.modoPruebaEstado=rpcNoDisponible(error,'obtener_modo_prueba_empresa_v210')?'no_disponible':'error';
+      if(usuario.modoPruebaEstado==='no_disponible')usuario.modoPruebaDisponible=false;
+      console.warn('modo-prueba',error);return false;
+    }
+  })();
+  modoConsultaPromesa={usuario,promesa};
+  try{return await promesa;}finally{if(modoConsultaPromesa?.promesa===promesa)modoConsultaPromesa=null;}
 }
 
 async function cargarSesion(){
@@ -953,11 +971,12 @@ async function cargarSesion(){
     empresaPoliticaRetencion:perfil.empresa_politica_retencion||'',
     adminPlataforma:perfil.admin_plataforma===true,registroEmailHabilitado:perfil.registro_email_habilitado===true,
     plataformaListaPiloto:perfil.plataforma_lista_piloto===true,
-    modoPruebaInterna:false,modoPruebaDisponible:false,remitosPruebaPendientes:0,remitosPruebaTotal:0
+    modoPruebaInterna:false,modoPruebaDisponible:false,modoPruebaEstado:'cargando',remitosPruebaPendientes:0,remitosPruebaTotal:0
   };
   registroEmailHabilitado=cu.registroEmailHabilitado;
   await cargarModoPruebaEmpresa();
   await refrescarDatos();
+  if(tokenObjetivo)await cargarRemitoObjetivo();
   estadoPerfil='ok';
   arrancarApp();
   return true;
@@ -977,13 +996,50 @@ function mapearRemito(r){
   };
 }
 async function cargarRemitos({reset=true}={}){
-  const desde=reset?0:remitos.length,hasta=desde+REM_PAGE-1;
-  const {data,error,count}=await sb.from('remitos').select('*, items_remito(*)',{count:'exact'}).order('created_at',{ascending:false}).range(desde,hasta);
+  const usuario=cu,desde=reset?0:remitosPaginados.length,hasta=desde+REM_PAGE-1;
+  const {data,error,count}=await sb.from('remitos').select('*, items_remito(*)',{count:'exact'}).order('created_at',{ascending:false}).order('id',{ascending:false}).range(desde,hasta);
+  if(cu!==usuario)return false;
   if(error){console.error(error);cargaRemitosError=error;registrarError('cargar_remitos',error);return false;}
   const nuevos=(data||[]).map(mapearRemito);
-  remitos=reset?nuevos:remitos.concat(nuevos.filter(n=>!remitos.some(r=>String(r.id)===String(n.id))));
-  totalRemitosDisponibles=Number(count??remitos.length);hayMasRemitos=remitos.length<totalRemitosDisponibles;cargaRemitosError=null;
+  remitosPaginados=reset?nuevos:remitosPaginados.concat(nuevos.filter(n=>!remitosPaginados.some(r=>String(r.id)===String(n.id))));
+  totalRemitosDisponibles=Number(count??remitosPaginados.length);hayMasRemitos=remitosPaginados.length<totalRemitosDisponibles;cargaRemitosError=null;
+  reunirRemitos();
   return true;
+}
+function reunirRemitos(){
+  const registros=[...(resultadosBusqueda||[]),...(remitoObjetivo?[remitoObjetivo]:[]),...remitosPaginados,...entregasPendientes];
+  remitos=[...new Map(registros.map(r=>[String(r.id),r])).values()];
+}
+async function cargarPendientesChofer({reset=true}={}){
+  if(cu?.rol!=='chofer'){entregasPendientes=[];totalPendientesChofer=0;reunirRemitos();return true;}
+  const usuario=cu,desde=reset?0:entregasPendientes.length;
+  const {data,error,count}=await sb.from('remitos').select('*, items_remito(*)',{count:'exact'}).eq('estado','Pendiente').eq('chofer_id',cu.id).order('fecha',{ascending:true}).order('created_at',{ascending:true}).order('id',{ascending:true}).range(desde,desde+REM_PAGE-1);
+  if(cu!==usuario)return false;
+  if(error){cargaRemitosError=error;registrarError('cargar_pendientes',error);return false;}
+  const nuevos=(data||[]).map(mapearRemito);
+  entregasPendientes=reset?nuevos:entregasPendientes.concat(nuevos.filter(n=>!entregasPendientes.some(r=>r.id===n.id)));
+  totalPendientesChofer=Number(count??entregasPendientes.length);reunirRemitos();return true;
+}
+async function cargarMasPendientes(){
+  const btn=document.getElementById('cargar-mas-pendientes');setBusy(btn,true,'Cargando…');
+  if(await cargarPendientesChofer({reset:false}))goTab('entrega');else{setBusy(btn,false,'Reintentar');mostrarErrorCarga();}
+}
+async function cargarRemitoObjetivo(){
+  if(!/^[0-9a-f-]{36}$/i.test(tokenObjetivo||''))return;
+  const usuario=cu,{data,error}=await sb.from('remitos').select('*, items_remito(*)').eq('public_token',tokenObjetivo).maybeSingle();
+  if(cu!==usuario)return;
+  if(error){registrarError('abrir_enlace_remito',error);return;}
+  remitoObjetivo=data?mapearRemito(data):null;reunirRemitos();
+}
+async function recargarRemito(id){
+  const usuario=cu,{data,error}=await sb.from('remitos').select('*, items_remito(*)').eq('id',id).maybeSingle();
+  if(cu!==usuario||error||!data)return null;
+  const actualizado=mapearRemito(data);
+  remitosPaginados=remitosPaginados.map(r=>r.id===id?actualizado:r);
+  if(resultadosBusqueda)resultadosBusqueda=resultadosBusqueda.map(r=>r.id===id?actualizado:r);
+  entregasPendientes=entregasPendientes.filter(r=>r.id!==id);
+  if(cu.rol==='chofer'&&actualizado.estado==='Pendiente')entregasPendientes.push(actualizado);
+  remitoObjetivo=actualizado;reunirRemitos();return actualizado;
 }
 function resumenLocalRemitos(){
   return {
@@ -996,16 +1052,20 @@ function resumenLocalRemitos(){
   };
 }
 async function cargarResumenRemitos(){
-  if(totalRemitosDisponibles<=remitos.length){resumenRemitos=resumenLocalRemitos();return true;}
+  if(totalRemitosDisponibles<=remitosPaginados.length){resumenRemitos=resumenLocalRemitos();return true;}
   const {data,error}=await sb.rpc('resumen_remitos_v27');
   if(error){console.error('resumen-remitos',error);registrarError('resumen_remitos',error);return false;}
   const r=Array.isArray(data)?data[0]:data;resumenRemitos=r||{};return true;
 }
 async function refrescarDatos(){
-  const ok=await cargarRemitos({reset:true});
-  if(!ok)return [false,false];
-  const resumenOk=await cargarResumenRemitos();await cargarModoPruebaEmpresa();
-  return [true,resumenOk];
+  if(refrescoPromesa)return refrescoPromesa;
+  refrescoPromesa=(async()=>{
+    const ok=await cargarRemitos({reset:true});if(!ok)return [false,false];
+    const pendientesOk=await cargarPendientesChofer({reset:true});if(!pendientesOk)return [false,false];
+    const resumenOk=await cargarResumenRemitos();await cargarModoPruebaEmpresa();
+    actualizarEstadoOperacion();return [true,resumenOk];
+  })();
+  try{return await refrescoPromesa;}finally{refrescoPromesa=null;}
 }
 async function cargarMasRemitos(){
   const btn=document.getElementById('cargar-mas');setBusy(btn,true,'Cargando...');
@@ -1018,7 +1078,7 @@ async function reintentarCargaRemitos(){
   const [ok]=await refrescarDatos();
   if(ok)goTab(tabActual||HOME[cu.rol]);else setBusy(btn,false,'Reintentar');
 }
-function botonCargarMas(){return hayMasRemitos?`<div style="padding:16px 20px"><button type="button" class="btn bl" id="cargar-mas" onclick="cargarMasRemitos()">Cargar más (${Math.max(0,totalRemitosDisponibles-remitos.length)} restantes)</button></div>`:'';}
+function botonCargarMas(){return hayMasRemitos?`<div style="padding:16px 20px"><button type="button" class="btn bl" id="cargar-mas" onclick="cargarMasRemitos()">Cargar más (${Math.max(0,totalRemitosDisponibles-remitosPaginados.length)} restantes)</button></div>`:'';}
 function mostrarErrorCarga(){if(document.getElementById('main-content'))document.getElementById('main-content').innerHTML=renderErrorCarga();}
 function renderErrorCarga(){return `<div class="load-error" role="alert"><div class="t">No pudimos cargar los remitos</div><div class="s">Tus datos no se borraron. Hubo un problema de conexión o permisos y no vamos a mostrar una lista vacía.</div><button type="button" class="btn bp" id="retry-load" onclick="reintentarCargaRemitos()">Reintentar</button></div>`;}
 
@@ -1142,12 +1202,12 @@ async function cargarSeguimientoPublico(silencioso=false){
 window.addEventListener('load',async()=>{
   await retirarCacheAnterior();
   if(!initSupabase())return;
-  await cargarConfiguracionInicial();
   if(tokenSeguimiento){
     await cargarSeguimientoPublico();
     seguimientoInterval=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine)cargarSeguimientoPublico(true);},30000);
     return;
   }
+  await cargarConfiguracionInicial();
   sb.auth.onAuthStateChange((event,session)=>{
     if(event==='PASSWORD_RECOVERY'){
       recoveryMode=true;localStorage.setItem('grm_recovery_pending','1');
@@ -1174,7 +1234,9 @@ const ST={Firmado:{col:'var(--green)',lbl:'Entregado'},Programado:{col:'var(--bl
 
 let cu=null,usuariosEmpresa=[],accesosEmpresa=[];
 const REM_PAGE=100;
-let remitos=[],resumenRemitos={},totalRemitosDisponibles=0,hayMasRemitos=false,itemsActual=[],itemsEstado=[],firmaData=null,signing=false,confActual=null,remitoActual=null,clockInterval=null,accessCheckInterval=null,idleInterval=null,ultimaActividad=Date.now(),realtimeChannel=null,manualFoto=null,entregaFoto=null,documentoNuevo=null,isOnline=navigator.onLine,filtro='todos',tabActual='',editandoId=null,entregaSeleccionadaId=null,firmaCanvasInicializado=null,demoState=null,demoSigning=false,demoFirmaCanvas=null;
+let remitos=[],remitosPaginados=[],entregasPendientes=[],totalPendientesChofer=0,remitoObjetivo=null,resumenRemitos={},totalRemitosDisponibles=0,hayMasRemitos=false,itemsActual=[],itemsEstado=[],firmaData=null,signing=false,confActual=null,remitoActual=null,clockInterval=null,accessCheckInterval=null,idleInterval=null,ultimaActividad=Date.now(),realtimeChannel=null,manualFoto=null,entregaFoto=null,documentoNuevo=null,isOnline=navigator.onLine,filtro='todos',tabActual='',editandoId=null,entregaSeleccionadaId=null,firmaCanvasInicializado=null,demoState=null,demoSigning=false,demoFirmaCanvas=null;
+let formularioEditado=false,operacionEnCurso=false,refrescoPromesa=null,busquedaRemitos='';
+let resultadosBusqueda=null,totalBusqueda=0,busquedaEnCurso=false,errorBusqueda='',busquedaSecuencia=0,busquedaTimer=null;
 const tokenObjetivo=new URLSearchParams(window.location.search).get('remito');
 const tokenSeguimiento=(()=>{
   const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
@@ -1243,6 +1305,7 @@ function cuitValido(v){
 function empresaListaParaOperar(){return !!cu&&!!cu.empresaRazonSocial&&cuitValido(cu.empresaCuit)&&!!cu.empresaDomicilioPrivacidad&&emailValido(cu.empresaEmailPrivacidad||'')&&String(cu.empresaPoliticaRetencion||'').trim().length>=10;}
 function bloqueosOperacion(){
   if(!cu)return [];
+  if(cu.modoPruebaEstado!=='ok')return [{id:'conexion',texto:'confirmar el estado de la empresa. Tus datos del formulario se conservan'}];
   if(cu.modoPruebaInterna)return [];
   const bloqueos=[];
   if(!empresaListaParaOperar())bloqueos.push({id:'empresa',texto:'datos legales y política de conservación de la empresa'});
@@ -1251,6 +1314,7 @@ function bloqueosOperacion(){
   return bloqueos;
 }
 function exigirPreparacionOperativa(){
+  if(cu?.modoPruebaEstado!=='ok'){alert('No pudimos comprobar el modo actual. Tocá Reintentar; conservamos lo que estás cargando.');return false;}
   if(cu?.modoPruebaInterna)return true;
   if(!cu?.plataformaListaPiloto){alert('El piloto todavía no está habilitado. El responsable de GoRemitos debe completar y verificar la preparación operativa.');return false;}
   if(!empresaListaParaOperar()){alert('Antes de operar con datos reales, un administrador debe completar los datos legales y la política de conservación de la empresa en Usuarios.');return false;}
@@ -1258,10 +1322,42 @@ function exigirPreparacionOperativa(){
 }
 function badgePrueba(rem){return rem?.esPrueba?'<span class="test-badge"><i class="ti ti-flask"></i>Prueba</span>':'';}
 function bannerModoPrueba(){
+  if(cu&&cu.modoPruebaEstado!=='ok')return '<div class="warning-box" role="status" style="margin:16px 20px"><strong>No pudimos verificar el estado de la empresa.</strong> Conservamos lo que estás cargando. Revisá la conexión y reintentá antes de guardar. <button type="button" class="link-btn" onclick="reintentarEstadoOperacion()">Reintentar</button></div>';
   if(!cu?.modoPruebaInterna)return '';
   return '<div class="test-mode-banner" role="status"><i class="ti ti-flask"></i><div><strong>Modo de prueba interna activo.</strong> Usá solamente datos ficticios. Todo lo que se cree quedará marcado como PRUEBA y separado visualmente de la operación real.</div></div>';
 }
-function contenidoConModoPrueba(html){return `${bannerModoPrueba()}${html}`;}
+function contenidoConModoPrueba(html){return `<div id="operation-banner">${bannerModoPrueba()}</div>${html}`;}
+function avisoPreparacionFormulario(){
+  const bloqueos=bloqueosOperacion();if(!bloqueos.length)return '';
+  if(bloqueos[0].id==='conexion')return '<strong>Guardado en pausa.</strong> Verificá la conexión y tocá Reintentar en el aviso superior. No hace falta volver a cargar los datos.';
+  return `<strong>Todavía no se puede guardar una entrega real.</strong> Falta ${esc(bloqueos.map(x=>x.texto).join(', '))}. Un administrador puede activar el modo de prueba interna desde Usuarios.<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar sin guardar</button>${cu.rol==='admin'?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')">Activar prueba interna</button>':''}</div>`;
+}
+function actualizarEstadoOperacion(){
+  const banner=document.getElementById('operation-banner');if(banner)banner.innerHTML=bannerModoPrueba();
+  const aviso=document.getElementById('form-operation-status');
+  if(aviso){aviso.innerHTML=avisoPreparacionFormulario();aviso.hidden=!bloqueosOperacion().length;}
+  const btn=document.getElementById('btn-guardar-remito');
+  if(btn&&!operacionEnCurso){btn.disabled=!!bloqueosOperacion().length;btn.textContent=editandoId?'Guardar cambios':cu?.modoPruebaInterna?'Programar prueba':'Programar entrega';}
+}
+async function reintentarEstadoOperacion(){await cargarModoPruebaEmpresa();actualizarEstadoOperacion();}
+async function prepararOperacion(){
+  if(!requireOnline()||operacionEnCurso)return false;
+  const modoAnterior=cu?.modoPruebaInterna;
+  const ok=await cargarModoPruebaEmpresa();actualizarEstadoOperacion();
+  if(operacionEnCurso)return false;
+  if(!ok)return false;
+  if(modoAnterior!==cu.modoPruebaInterna){alert('El administrador cambió el modo de la empresa. Revisá el aviso y volvé a confirmar. Tus datos se conservaron.');return false;}
+  return exigirPreparacionOperativa();
+}
+function marcarFormularioEditado(){formularioEditado=true;}
+function limpiarEstadoFormulario(){formularioEditado=false;}
+function puedeSalirDelFormulario(){
+  if(operacionEnCurso){alert('Esperá a que termine el guardado antes de salir.');return false;}
+  return !formularioEditado||confirm('Tenés cambios sin guardar. ¿Querés salir y descartarlos?');
+}
+document.addEventListener('input',event=>{if(['nuevo','entrega','manual'].includes(tabActual)&&event.target.closest?.('#main-content'))marcarFormularioEditado();});
+document.addEventListener('change',event=>{if(['nuevo','entrega','manual'].includes(tabActual)&&event.target.closest?.('#main-content'))marcarFormularioEditado();});
+window.addEventListener('beforeunload',event=>{if(formularioEditado||operacionEnCurso){event.preventDefault();event.returnValue='';}});
 function requireOnline(){if(navigator.onLine)return true;alert('Necesitás conexión para guardar esta operación. Tus datos todavía no fueron enviados.');return false;}
 function rpcNoDisponible(error,nombre){const m=String(error?.message||'');return ['PGRST202','42883'].includes(error?.code)||m.includes(nombre)&&/schema cache|function|does not exist|Could not find/i.test(m);}
 async function rpcVersionado(nuevo,anterior,parametros){
@@ -1400,15 +1496,16 @@ async function cancelPasswordRecovery(){
   await sb.auth.signOut();recoveryMode=false;localStorage.removeItem('grm_recovery_pending');history.replaceState({},document.title,window.location.pathname);showView('view-login');
 }
 async function doLogout(){
+  if(!puedeSalirDelFormulario())return;
   if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
   closeProfile();
-  sessionStorage.removeItem('grm_oauth_return');await sb.auth.signOut();cu=null;remitos=[];estadoPerfil='sin_sesion';
+  sessionStorage.removeItem('grm_oauth_return');await sb.auth.signOut();cu=null;remitos=[];remitosPaginados=[];entregasPendientes=[];resultadosBusqueda=null;remitoObjetivo=null;busquedaRemitos='';filtro='todos';busquedaSecuencia++;limpiarEstadoFormulario();estadoPerfil='sin_sesion';
   if(clockInterval)clearInterval(clockInterval);if(accessCheckInterval)clearInterval(accessCheckInterval);if(idleInterval)clearInterval(idleInterval);accessCheckInterval=null;idleInterval=null;showView('view-welcome');
 }
 async function cerrarPorAccesoEliminado(){
   if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
   if(accessCheckInterval)clearInterval(accessCheckInterval);if(idleInterval)clearInterval(idleInterval);accessCheckInterval=null;idleInterval=null;
-  await sb.auth.signOut();cu=null;remitos=[];estadoPerfil='inactivo';showView('view-login');showErr('log-err','Tu acceso a esta empresa fue eliminado. Contactá a un administrador si necesitás recuperarlo.');
+  await sb.auth.signOut();cu=null;remitos=[];remitosPaginados=[];entregasPendientes=[];resultadosBusqueda=null;remitoObjetivo=null;limpiarEstadoFormulario();estadoPerfil='inactivo';showView('view-login');showErr('log-err','Tu acceso a esta empresa fue eliminado. Contactá a un administrador si necesitás recuperarlo.');
 }
 async function verificarAccesoVigente(){
   if(!cu||!isOnline||!sb)return;
@@ -1423,10 +1520,9 @@ async function verificarAccesoVigente(){
       empresaTelefonoPrivacidad:acceso.empresa_telefono_privacidad||'',empresaPoliticaRetencion:acceso.empresa_politica_retencion||'',
       plataformaListaPiloto:acceso.plataforma_lista_piloto===true
     });
-    const modoAnterior=cu.modoPruebaInterna;
     await cargarModoPruebaEmpresa();
     actualizarIdentidadHeader();
-    if(modoAnterior!==cu.modoPruebaInterna&&tabActual)goTab(tabActual);
+    actualizarEstadoOperacion();
   }
 }
 function iniciarControlAcceso(){
@@ -1475,7 +1571,7 @@ function buildNav(){
     ?`<button type="button" class="bn-plus" id="bn-nuevo" onclick="goTab('nuevo')" aria-label="Crear nuevo remito"><i class="ti ti-plus" aria-hidden="true"></i><span class="bn-plus-label">Nuevo remito</span></button>`
     :`<button type="button" class="bn-item" id="bn-${it.id}" onclick="goTab('${it.id}')"><i class="ti ${it.ico}"></i><span>${it.lbl}</span></button>`
   ).join('');
-  document.getElementById('bnav').innerHTML=`<div class="desktop-nav-head"><div class="desktop-nav-logo"><b>Go</b>Remitos</div><div class="desktop-nav-kicker">${esc(cu.empresa)} · ${esc(ROL_LBL[cu.rol]||cu.rol)}</div></div><div class="desktop-nav-menu">${botones}</div><div class="desktop-nav-foot"><span>GoRemitos 2.10</span><span>Seguimiento y constancias</span></div>`;
+  document.getElementById('bnav').innerHTML=`<div class="desktop-nav-head"><div class="desktop-nav-logo"><b>Go</b>Remitos</div><div class="desktop-nav-kicker">${esc(cu.empresa)} · ${esc(ROL_LBL[cu.rol]||cu.rol)}</div></div><div class="desktop-nav-menu">${botones}</div><div class="desktop-nav-foot"><span>GoRemitos ${APP_VERSION}</span><span>Seguimiento y constancias</span></div>`;
   goTab(HOME[cu.rol]);
   if(tokenObjetivo){
     const r=remitos.find(x=>String(x.publicToken)===String(tokenObjetivo));
@@ -1486,6 +1582,9 @@ function goTab(id){
   const permitidos=(NAV[cu.rol]||[]).map(x=>x.id).concat((NAV[cu.rol]||[]).some(x=>x.plus)?['nuevo']:[]);
   if(id==='demo'&&['admin','oficina'].includes(cu.rol))permitidos.push('demo');
   if(!permitidos.includes(id))id=HOME[cu.rol];
+  if(id===tabActual&&formularioEditado){actualizarEstadoOperacion();return;}
+  if(!puedeSalirDelFormulario())return;
+  limpiarEstadoFormulario();
   tabActual=id;
   if(id==='entrega'){entregaSeleccionadaId=null;resetEntregaState();}
   document.querySelectorAll('.bn-item,.bn-plus').forEach(x=>x.classList.remove('active'));
@@ -1607,20 +1706,59 @@ function renderDemo(){
 /* ===== REMITOS ===== */
 function renderRemitos(){
   return `<div class="screen active remitos-screen">
-    <div class="pagehead"><div class="tit">Remitos</div><div class="sub tnum">${totalRemitosDisponibles} documentos · mostrando ${remitos.length}</div></div>
+    <div class="pagehead"><div class="tit">Remitos</div><div class="sub tnum">${totalRemitosDisponibles} documentos · buscá en todo el historial</div></div>
     <div class="list-panel">
-    <div class="search"><i class="ti ti-search"></i><input aria-label="Buscar remitos" placeholder="Buscar cliente, número, chofer..." oninput="refreshList()" id="q-search"></div>
+    <div class="search"><i class="ti ti-search"></i><input aria-label="Buscar en todos los remitos" placeholder="Buscar cliente, número o chofer…" value="${escAttr(busquedaRemitos)}" oninput="programarBusqueda(this.value)" id="q-search" maxlength="120"><button type="button" class="icon-btn" onclick="limpiarBusqueda()" aria-label="Limpiar búsqueda"><i class="ti ti-x"></i></button></div>
     <div class="tabs">
       ${[['todos','Todos'],['Prueba','Pruebas'],['Programado','Programados'],['EnCamino','En camino'],['cerrados','Entregados'],['prob','Problemas'],['Manual','Manuales']].map(([k,l])=>`<button class="tab ${filtro===k?'on':''}" onclick="setFiltro('${k}',this)">${l}</button>`).join('')}
     </div>
-    <div id="lr">${listaRemitos()}</div>${botonCargarMas()}</div>
+    <div id="search-summary" class="sub tnum" aria-live="polite" style="padding:10px 20px">${resumenBusqueda()}</div><div id="lr">${listaRemitos()}</div><div id="list-pagination">${paginacionRemitos()}</div></div>
   </div>`;
 }
-function setFiltro(f,btn){filtro=f;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));if(btn)btn.classList.add('on');refreshList();}
-function refreshList(){const el=document.getElementById('lr');if(el)el.innerHTML=listaRemitos();}
+function setFiltro(f,btn){filtro=f;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));if(btn)btn.classList.add('on');buscarRemitos();}
+function usaBusquedaRemota(){return !!busquedaRemitos.trim()||filtro!=='todos';}
+function resumenBusqueda(){return busquedaEnCurso?'Buscando…':errorBusqueda?'No se pudo completar la búsqueda':usaBusquedaRemota()?`${totalBusqueda} resultado${totalBusqueda===1?'':'s'} · mostrando ${resultadosBusqueda?.length||0}`:`Mostrando ${remitosPaginados.length} de ${totalRemitosDisponibles}`;}
+function paginacionRemitos(){return usaBusquedaRemota()?(resultadosBusqueda?.length<totalBusqueda?'<div class="pad"><button class="btn bl" id="search-more" onclick="buscarRemitos(false)">Cargar más resultados</button></div>':''):botonCargarMas();}
+function refreshList(){
+  const el=document.getElementById('lr');if(el)el.innerHTML=listaRemitos();
+  const resumen=document.getElementById('search-summary');if(resumen)resumen.textContent=resumenBusqueda();
+  const pagina=document.getElementById('list-pagination');if(pagina)pagina.innerHTML=paginacionRemitos();
+}
+function programarBusqueda(valor){busquedaRemitos=String(valor||'').slice(0,120);clearTimeout(busquedaTimer);busquedaTimer=setTimeout(()=>buscarRemitos(),300);}
+function limpiarBusqueda(){busquedaRemitos='';const el=document.getElementById('q-search');if(el){el.value='';el.focus();}buscarRemitos();}
+function valorBusquedaPostgrest(valor){return '"%'+String(valor).replace(/\\/g,'\\\\').replace(/[%_*]/g,'\\$&').replace(/"/g,'\\"')+'%"';}
+async function buscarRemitos(reset=true){
+  clearTimeout(busquedaTimer);
+  const secuencia=++busquedaSecuencia,usuario=cu;
+  if(!usaBusquedaRemota()){resultadosBusqueda=null;busquedaEnCurso=false;errorBusqueda='';reunirRemitos();refreshList();return;}
+  const desde=reset?0:(resultadosBusqueda?.length||0);
+  if(reset)resultadosBusqueda=[];
+  busquedaEnCurso=true;errorBusqueda='';refreshList();
+  let consulta=sb.from('remitos').select('*, items_remito(*)',{count:'exact'});
+  if(busquedaRemitos.trim()){
+    const valor=valorBusquedaPostgrest(busquedaRemitos.trim());
+    consulta=consulta.or(`num.ilike.${valor},cliente.ilike.${valor},chofer_nombre.ilike.${valor}`);
+  }
+  if(filtro==='Prueba')consulta=consulta.eq('es_prueba',true);
+  else if(filtro==='Programado')consulta=consulta.eq('estado','Pendiente').is('salida_at',null);
+  else if(filtro==='EnCamino')consulta=consulta.eq('estado','Pendiente').not('salida_at','is',null);
+  else if(filtro==='cerrados')consulta=consulta.in('estado',['Firmado','Disconforme','Rechazado']);
+  else if(filtro==='prob')consulta=consulta.in('estado',['Disconforme','Rechazado']);
+  else if(filtro==='Manual')consulta=consulta.eq('estado','Manual');
+  try{
+    const {data,error,count}=await consulta.order('created_at',{ascending:false}).order('id',{ascending:false}).range(desde,desde+REM_PAGE-1);
+    if(cu!==usuario||secuencia!==busquedaSecuencia)return;
+    if(error)throw error;
+    const nuevos=(data||[]).map(mapearRemito);
+    resultadosBusqueda=reset?nuevos:[...(resultadosBusqueda||[]),...nuevos.filter(n=>!resultadosBusqueda.some(r=>r.id===n.id))];
+    totalBusqueda=Number(count??resultadosBusqueda.length);reunirRemitos();
+  }catch(error){if(cu!==usuario||secuencia!==busquedaSecuencia)return;errorBusqueda=String(error.message||error);}
+  if(secuencia===busquedaSecuencia){busquedaEnCurso=false;refreshList();}
+}
 function listaRemitos(){
-  const q=(document.getElementById('q-search')?.value||'').toLowerCase();
-  let f=remitos.filter(r=>[r.num,r.cliente,r.chofer].join(' ').toLowerCase().includes(q));
+  if(busquedaEnCurso&&!(resultadosBusqueda?.length))return empty('ti-search','Buscando en todos los remitos…','');
+  if(errorBusqueda)return `<div class="warning-box" role="alert">No pudimos consultar los resultados. <button class="link-btn" onclick="buscarRemitos()">Reintentar</button></div>`;
+  let f=usaBusquedaRemota()?(resultadosBusqueda||[]):remitosPaginados;
   if(filtro==='prob')f=f.filter(r=>r.estado==='Disconforme'||r.estado==='Rechazado');
   else if(filtro==='Prueba')f=f.filter(r=>r.esPrueba);
   else if(filtro==='Programado')f=f.filter(r=>r.estado==='Pendiente'&&!r.salidaAt);
@@ -2027,7 +2165,7 @@ function renderNuevo(){
   const bloqueos=bloqueosOperacion(),operacionLista=bloqueos.length===0;
   return `<div class="screen active new-screen"><div id="nv-form">
     <div class="pagehead"><div class="tit">${editando?'Editar entrega programada':'Programar entrega'}</div><div class="sub">${editando?'Sólo puede modificarse antes de iniciar el viaje':'Adjuntá el remito emitido por tu empresa y asigná el viaje'}</div></div>
-    ${!operacionLista?`<div class="warning-box" style="margin:14px 20px 0"><strong>Todavía no se puede guardar una entrega real.</strong> Falta ${esc(bloqueos.map(x=>x.texto).join(', '))}. Un administrador puede activar el modo de prueba interna desde Usuarios.<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar sin guardar</button>${cu.rol==='admin'?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')">Activar prueba interna</button>':''}</div></div>`:''}
+    <div id="form-operation-status" class="warning-box" style="margin:14px 20px 0" ${operacionLista?'hidden':''}>${avisoPreparacionFormulario()}</div>
     <div class="pad">
     <div class="row2"><div class="field"><label>N° remito *</label><input id="f-num" placeholder="0001" type="text" maxlength="50"></div><div class="field"><label>Fecha *</label><input id="f-fecha" type="date" value="${hoy()}"></div></div>
     <div class="field"><label>Cliente *</label><input id="f-cli" placeholder="Nombre o empresa" type="text" maxlength="160"></div>
@@ -2099,16 +2237,16 @@ async function cargarChoferes(seleccionado=''){
   select.innerHTML='<option value="">Seleccioná un chofer</option>'+usuariosEmpresa.map(u=>`<option value="${escAttr(u.id)}" ${String(u.id)===String(seleccionado)?'selected':''}>${esc(u.nombre)}</option>`).join('');select.disabled=false;if(ayuda)ayuda.textContent=`${usuariosEmpresa.length} chofer${usuariosEmpresa.length>1?'es':''} disponible${usuariosEmpresa.length>1?'s':''}.`;
 }
 function initItems(){itemsActual=[{id:crypto.randomUUID(),cod:'',qty:'',desc:''}];renderItemsForm();}
-function addItem(){itemsActual.push({id:crypto.randomUUID(),cod:'',qty:'',desc:''});renderItemsForm();}
-function delItem(id){if(itemsActual.length===1)return;itemsActual=itemsActual.filter(x=>x.id!==id);renderItemsForm();}
+function addItem(){marcarFormularioEditado();itemsActual.push({id:crypto.randomUUID(),cod:'',qty:'',desc:''});renderItemsForm();}
+function delItem(id){if(itemsActual.length===1)return;marcarFormularioEditado();itemsActual=itemsActual.filter(x=>x.id!==id);renderItemsForm();}
 function updItem(id,f,v){const it=itemsActual.find(x=>x.id===id);if(it)it[f]=v;}
 function renderItemsForm(){
   const el=document.getElementById('items-wrap');if(!el)return;
   el.innerHTML=itemsActual.map((it,i)=>`<div class="if-row"><input aria-label="Código del ítem ${i+1}" style="width:72px;flex:none" placeholder="A4-001" maxlength="50" value="${escAttr(it.cod)}" oninput='updItem(${js(it.id)},"cod",this.value)'><input aria-label="Cantidad del ítem ${i+1}" style="width:52px;flex:none;text-align:center" placeholder="10" type="number" min="0.01" max="99999999" step="0.01" value="${escAttr(it.qty)}" oninput='updItem(${js(it.id)},"qty",this.value)'><input aria-label="Descripción del ítem ${i+1}" style="flex:1" placeholder="Descripción" maxlength="300" value="${escAttr(it.desc)}" oninput='updItem(${js(it.id)},"desc",this.value)'><button type="button" class="if-del" aria-label="Quitar ítem ${i+1}" onclick='delItem(${js(it.id)})'><i class="ti ti-x"></i></button></div>`).join('');
 }
 async function guardarRemito(){
-  if(!requireOnline())return;
-  if(!exigirPreparacionOperativa())return;
+  if(!await prepararOperacion())return;
+  const modoEsperado=cu.modoPruebaInterna;
   const cli=gv('f-cli'),num=gv('f-num'),dir=gv('f-dir');
   if(!cli||!num||!dir){alert('Completá cliente, número y dirección');return;}
   const choferId=gv('f-chofer'),chofer=usuariosEmpresa.find(x=>String(x.id)===String(choferId));if(!chofer){alert('Seleccioná un chofer');return;}
@@ -2117,16 +2255,19 @@ async function guardarRemito(){
   const eraEdicion=editandoId!==null,anterior=eraEdicion?remitos.find(x=>String(x.id)===String(editandoId)):null;
   if(!documentoNuevo&&!anterior?.documentoUrl){alert('Adjuntá el remito original en PDF o imagen.');return;}
   const btn=document.getElementById('btn-guardar-remito');setBusy(btn,true,'Guardando...');
+  operacionEnCurso=true;
   let documentoSubido=null,remId=null;
   try{
     const doc=documentoNuevo?await subirDocumentoRemito(documentoNuevo):{path:anterior.documentoUrl,sha256:anterior.documentoSha256,nombre:anterior.documentoNombre,mime:anterior.documentoMime,size:anterior.documentoSize};
     if(documentoNuevo)documentoSubido=doc.path;
-    const {data,error}=await rpcVersionado('guardar_remito_v210','guardar_remito_v27',{p_remito_id:editandoId,p_num:num,p_cliente:cli,p_dir:dir,p_contacto:gv('f-cont'),p_tel:gv('f-tel'),p_chofer_id:choferId,p_fecha:gv('f-fecha')||hoy(),p_items:its,p_documento_url:doc.path,p_documento_sha256:doc.sha256,p_documento_nombre:doc.nombre,p_documento_mime:doc.mime,p_documento_size:doc.size});
+    const {data,error}=await sb.rpc('guardar_remito_v211',{p_remito_id:editandoId,p_num:num,p_cliente:cli,p_dir:dir,p_contacto:gv('f-cont'),p_tel:gv('f-tel'),p_chofer_id:choferId,p_fecha:gv('f-fecha')||hoy(),p_items:its,p_documento_url:doc.path,p_documento_sha256:doc.sha256,p_documento_nombre:doc.nombre,p_documento_mime:doc.mime,p_documento_size:doc.size,p_modo_prueba:modoEsperado});
     if(error)throw error;remId=data;
     if(documentoSubido&&anterior?.documentoUrl&&anterior.documentoUrl!==documentoSubido)await limpiarDocumentosHuerfanos([anterior.documentoUrl]);
-  }catch(error){if(documentoSubido)await limpiarDocumentosHuerfanos([documentoSubido]);alert('Error al guardar: '+(error.message||error));setBusy(btn,false,eraEdicion?'Guardar cambios':cu.modoPruebaInterna?'Programar prueba':'Programar entrega');return;}
+  }catch(error){if(documentoSubido)await limpiarDocumentosHuerfanos([documentoSubido]);operacionEnCurso=false;registrarError('guardar_remito',error);alert('No se pudo confirmar el guardado: '+(error.message||error)+'. Tus datos siguen en el formulario.');setBusy(btn,false,eraEdicion?'Guardar cambios':cu.modoPruebaInterna?'Programar prueba':'Programar entrega');return;}
+  limpiarEstadoFormulario();
   await refrescarDatos();
-  remitoActual=remitos.find(r=>String(r.id)===String(remId));editandoId=null;documentoNuevo=null;
+  operacionEnCurso=false;
+  remitoActual=await recargarRemito(remId);editandoId=null;documentoNuevo=null;
   const r=remitoActual;
   if(!r){alert('El remito se guardó, pero no se pudo recargar. Volvé a Remitos.');goTab('remitos');return;}
   document.querySelector('#nv-ok .banner-tit').textContent=r.esPrueba?(eraEdicion?'Prueba actualizada':'Prueba programada'):(eraEdicion?'Entrega actualizada':'Entrega programada');
@@ -2142,29 +2283,32 @@ async function guardarRemito(){
   if(r.publicToken){const qw=document.getElementById('qr-nuevo-wrap');qw.style.display='block';setTimeout(()=>renderQR('qr-nuevo',urlSeguimiento(r)),0);}
   window.scrollTo(0,0);
 }
-function editarRemito(id){const r=remitos.find(x=>String(x.id)===String(id));if(!r||r.estado!=='Pendiente'||r.salidaAt){alert('Sólo se pueden editar entregas programadas que todavía no salieron.');return;}editandoId=r.id;documentoNuevo=null;goTab('nuevo');}
-function cancelarEdicion(){editandoId=null;documentoNuevo=null;goTab('remitos');}
+function editarRemito(id){const r=remitos.find(x=>String(x.id)===String(id));if(!r||r.estado!=='Pendiente'||r.salidaAt){alert('Sólo se pueden editar entregas programadas que todavía no salieron.');return;}if(!puedeSalirDelFormulario())return;limpiarEstadoFormulario();editandoId=r.id;documentoNuevo=null;goTab('nuevo');}
+function cancelarEdicion(){if(!puedeSalirDelFormulario())return;limpiarEstadoFormulario();editandoId=null;documentoNuevo=null;goTab('remitos');}
 function telWA(t){
-  let d=(t||'').replace(/\D/g,'');
+  let d=String(t||'').replace(/\D/g,'');
   if(!d)return '';
-  if(d.startsWith('549'))return d;
-  if(d.startsWith('54'))return '549'+d.slice(2);
+  if(String(t||'').trim().startsWith('+')&&!d.startsWith('54'))return /^\d{8,15}$/.test(d)?d:'';
+  if(d.startsWith('549'))d=d.slice(3);
+  else if(d.startsWith('54'))d=d.slice(2);
   if(d.startsWith('0'))d=d.slice(1);
-  return '549'+d;
+  if(d.length===12){for(const n of [2,3,4]){if(d.slice(n,n+2)==='15'){d=d.slice(0,n)+d.slice(n+2);break;}}}
+  return /^\d{10}$/.test(d)?'549'+d:'';
 }
 function avisarCliente(tipo='programado'){
   const r=remitoActual;if(!r||!r.tel)return;
   if(r.esPrueba){alert('Las entregas de prueba no envían avisos a destinatarios. Compartí el seguimiento sólo con tu equipo interno.');return;}
+  const telefono=telWA(r.tel);if(!telefono){alert('Revisá el teléfono: incluí el código de área y el número completo.');return;}
   const enCamino=tipo==='en_camino',titulo=enCamino?'Tu pedido está en camino':'Tu entrega fue programada';
   const msg=`🚚 *${titulo}*\n${cu.empresa}\n\nRemito N° ${r.num} · ${r.fecha}\nEntrega: ${r.dir}${r.chofer?`\nChofer: ${r.chofer}`:''}\n\nSeguí el estado acá: ${urlSeguimiento(r)}\n\nEl enlace no muestra datos personales ni el contenido del remito.`;
-  window.open(`https://wa.me/${telWA(r.tel)}?text=${encodeURIComponent(msg)}`,'_blank','noopener,noreferrer');
+  window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`,'_blank','noopener,noreferrer');
 }
 function avisarEnCamino(){
   avisarCliente('en_camino');
   const w=document.getElementById('wa-notify-wrap');
   if(w)w.innerHTML=`<div style="border:1px solid var(--green-bd);border-radius:10px;padding:11px;text-align:center;font-size:12px;font-weight:600;color:var(--green);display:flex;align-items:center;justify-content:center;gap:7px"><i class="ti ti-brand-whatsapp" style="font-size:15px"></i>WhatsApp abierto para enviar el aviso</div>`;
 }
-function nuevoRemito(){editandoId=null;remitoActual=null;documentoNuevo=null;goTab('nuevo');}
+function nuevoRemito(){if(!puedeSalirDelFormulario())return;limpiarEstadoFormulario();editandoId=null;remitoActual=null;documentoNuevo=null;goTab('nuevo');}
 
 function mapsUrl(dir){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}`;}
 function openMapsRemito(id){const r=remitos.find(x=>String(x.id)===String(id));if(r?.dir)window.open(mapsUrl(r.dir),'_blank','noopener,noreferrer');}
@@ -2186,19 +2330,22 @@ function renderEntrega(){
   const seleccionada=pendientes.find(r=>String(r.id)===String(entregaSeleccionadaId));
   if(seleccionada)return renderEntregaDetalle(seleccionada,pendientes.length);
   entregaSeleccionadaId=null;
-  if(!pendientes.length)return `<div class="screen active delivery-list-screen">${empty('ti-circle-check','Sin entregas pendientes','Esperá que oficina te asigne un remito')}</div>`;
-  return `<div class="screen active delivery-list-screen"><div class="pagehead"><div class="tit">Mis entregas</div><div class="sub">${pendientes.length} activa${pendientes.length>1?'s':''} o programada${pendientes.length>1?'s':''}</div></div><div class="list-panel" style="margin-top:14px">${pendientes.map(r=>`<button type="button" class="lrow hot" onclick='abrirEntrega(${js(r.id)})'><div class="top"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="num tnum">N° ${esc(r.num)}</span>${badgePrueba(r)}${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div><div class="cli">${esc(r.cliente)}</div><div class="meta">${esc(r.dir)} · ${esc(r.fecha)}${r.salidaAt?` · salida ${new Date(r.salidaAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`:''}</div></button>`).join('')}</div></div>`;
+  if(!pendientes.length)return `<div class="screen active delivery-list-screen">${empty('ti-circle-check','Sin entregas pendientes','Tus entregas asignadas aparecerán acá.')}<div class="pad"><button class="btn bl" onclick="actualizarEntregas()">Actualizar entregas</button></div></div>`;
+  const mas=totalPendientesChofer>entregasPendientes.length?`<div class="pad"><button class="btn bl" id="cargar-mas-pendientes" onclick="cargarMasPendientes()">Cargar más entregas (${totalPendientesChofer-entregasPendientes.length})</button></div>`:'';
+  return `<div class="screen active delivery-list-screen"><div class="pagehead"><div class="tit">Mis entregas</div><div class="sub">${totalPendientesChofer} activa${totalPendientesChofer!==1?'s':''} o programada${totalPendientesChofer!==1?'s':''} · ordenadas por fecha</div></div><div class="list-panel" style="margin-top:14px">${pendientes.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))).map(r=>`<button type="button" class="lrow hot" onclick='abrirEntrega(${js(r.id)})'><div class="top"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="num tnum">N° ${esc(r.num)}</span>${badgePrueba(r)}${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div><div class="cli">${esc(r.cliente)}</div><div class="meta">${esc(r.dir)} · ${esc(r.fecha)}${r.salidaAt?` · salida ${new Date(r.salidaAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`:''}</div></button>`).join('')}</div>${mas}</div>`;
 }
+async function actualizarEntregas(){const [ok]=await refrescarDatos();if(ok)goTab('entrega');else mostrarErrorCarga();}
 function abrirEntrega(id){
+  if(!puedeSalirDelFormulario())return;limpiarEstadoFormulario();
   const r=remitos.find(x=>String(x.id)===String(id)&&x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id));
   if(!r){alert('Esta entrega no está disponible para tu usuario.');return;}
   entregaSeleccionadaId=r.id;resetEntregaState();
   document.getElementById('main-content').innerHTML=contenidoConModoPrueba(renderEntregaDetalle(r,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length));
   window.scrollTo(0,0);
 }
-function volverEntregas(){entregaSeleccionadaId=null;resetEntregaState();goTab('entrega');}
+function volverEntregas(){if(!puedeSalirDelFormulario())return;limpiarEstadoFormulario();entregaSeleccionadaId=null;resetEntregaState();goTab('entrega');}
 async function iniciarEntrega(id){
-  if(!requireOnline()||!exigirPreparacionOperativa())return;
+  if(!await prepararOperacion())return;
   const rem=remitos.find(x=>String(x.id)===String(id));if(!rem||rem.estado!=='Pendiente')return;
   if(!rem.documentoUrl){alert('La oficina debe adjuntar el remito original antes de iniciar el viaje.');return;}
   if(!confirm(`¿Iniciar ahora el viaje del remito N° ${rem.num}?\n\nDesde este momento figurará “En camino” y ya no podrá editarse ni eliminarse.`))return;
@@ -2309,7 +2456,7 @@ function renderCkItems(){
 }
 function fotoBtn(i){return `<button class="foto-btn" onclick="document.getElementById('fi-${i}').click()"><i class="ti ti-camera"></i>Sacar foto al bulto</button>`;}
 function fotoPreview(i,src){return `<div class="foto-preview"><img src="${escAttr(src)}" alt="Foto de evidencia"><button type="button" class="del-foto" onclick="delFoto(${i})" aria-label="Quitar foto del ítem"><i class="ti ti-x"></i></button></div>`;}
-function setItem(i,est){itemsEstado[i].estado=itemsEstado[i].estado===est?null:est;if(est==='ok')itemsEstado[i].qtyRecibida=Number(itemsEstado[i].qty)||0;updateCkItem(i);updateProg();}
+function setItem(i,est){marcarFormularioEditado();itemsEstado[i].estado=itemsEstado[i].estado===est?null:est;if(est==='ok')itemsEstado[i].qtyRecibida=Number(itemsEstado[i].qty)||0;updateCkItem(i);updateProg();}
 function setQty(i,v){const max=Number(itemsEstado[i].qty)||0;itemsEstado[i].qtyRecibida=Math.max(0,Math.min(Number(v)||0,max));const q=document.getElementById('ciq-'+i);if(q)q.textContent=`${itemsEstado[i].qtyRecibida}/${itemsEstado[i].qty}`;}
 function setNota(i,v){itemsEstado[i].nota=v;}
 async function handleFoto(i,input){const f=input.files[0];if(!f)return;try{itemsEstado[i].foto=await optimizarFoto(f);}catch(e){alert(e.message);input.value='';return;}const fw=document.getElementById('fw-'+i);if(fw)fw.innerHTML=fotoPreview(i,itemsEstado[i].foto);}
@@ -2333,7 +2480,7 @@ function updateProg(){
   const pt=document.getElementById('prog-txt'),pf=document.getElementById('prog-fill');
   if(pt)pt.textContent=`${done} de ${tot} revisados`;
   if(pf)pf.style.width=(done/tot*100)+'%';
-  if(done===tot){const fs=document.getElementById('firma-sec');if(fs){fs.style.display='block';setTimeout(initFirma,50);}}
+  const fs=document.getElementById('firma-sec');if(fs){fs.style.display=done===tot?'block':'none';if(done===tot)setTimeout(initFirma,50);}
 }
 function initFirma(){
   const sc=document.getElementById('sc');if(!sc)return;
@@ -2342,7 +2489,7 @@ function initFirma(){
   const cx=sc.getContext('2d');
   cx.strokeStyle='#111';cx.lineWidth=2.5;cx.lineCap='round';cx.lineJoin='round';
   function gp(e){const r=sc.getBoundingClientRect(),sx=sc.width/r.width,sy=sc.height/r.height;if(e.touches)return{x:(e.touches[0].clientX-r.left)*sx,y:(e.touches[0].clientY-r.top)*sy};return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};}
-  function mark(){firmaData=sc.toDataURL();const sh=document.getElementById('sh'),st=document.getElementById('sstatus');if(sh)sh.style.opacity='0';if(st)st.textContent='Firma capturada';}
+  function mark(){marcarFormularioEditado();firmaData=sc.toDataURL();const sh=document.getElementById('sh'),st=document.getElementById('sstatus');if(sh)sh.style.opacity='0';if(st)st.textContent='Firma capturada';}
   sc.addEventListener('mousedown',e=>{signing=true;cx.beginPath();const p=gp(e);cx.moveTo(p.x,p.y);});
   sc.addEventListener('mousemove',e=>{if(!signing)return;const p=gp(e);cx.lineTo(p.x,p.y);cx.stroke();mark();});
   sc.addEventListener('mouseup',()=>signing=false);sc.addEventListener('mouseleave',()=>signing=false);
@@ -2352,6 +2499,7 @@ function initFirma(){
 }
 function clearSign(){const sc=document.getElementById('sc');if(!sc)return;sc.getContext('2d').clearRect(0,0,sc.width,sc.height);firmaData=null;const sh=document.getElementById('sh'),st=document.getElementById('sstatus');if(sh)sh.style.opacity='1';if(st)st.textContent='';}
 function setConf(tipo){
+  marcarFormularioEditado();
   if(tipo==='ok'){const obs=document.getElementById('f-obs');if(obs)obs.value='';}
   if(tipo==='rech')clearSign();
   confActual=tipo;
@@ -2362,8 +2510,10 @@ function setConf(tipo){
   document.getElementById('draw-wrap').style.display=tipo==='rech'?'none':'block';
 }
 async function confirmarEntrega(){
-  if(!requireOnline())return;
-  if(!exigirPreparacionOperativa())return;
+  if(!await prepararOperacion())return;
+  if(itemsEstado.some(it=>!['ok','miss'].includes(it.estado))){alert('Revisá todos los ítems antes de confirmar.');return;}
+  if(confActual==='ok'&&itemsEstado.some(it=>it.estado==='miss')){alert('Hay faltantes o daños. Elegí Disconforme para que la constancia refleje lo sucedido.');return;}
+  if(confActual==='rech'&&itemsEstado.some(it=>Number(it.qtyRecibida)>0)){alert('Para registrar un rechazo total, todas las cantidades recibidas deben ser cero. Si se recibió parte, elegí Disconforme.');return;}
   if(!confActual){alert('Indicá si fue conforme, disconforme o rechazado');return;}
   const nombre=gv('f-rxn'),dni=gv('f-rxd');
   if(!nombre||!dni){alert('Ingresá nombre y DNI de quien recibe o rechaza');return;}
@@ -2372,6 +2522,7 @@ async function confirmarEntrega(){
   if(confActual==='rech'&&!gv('f-obs')){alert('Indicá el motivo del rechazo');return;}
   if(confActual!=='rech'&&!firmaData){alert('Falta la firma del receptor');return;}
   const btnConf=document.querySelector('#firma-sec button.bp');if(btnConf){btnConf.disabled=true;btnConf.textContent='Guardando...';}
+  operacionEnCurso=true;
   const subidos=[];let rpcConfirmada=false;
   try{
     const evidenciaId=crypto.randomUUID(),base=`${cu.empresaId}/${remitoActual.id}/${evidenciaId}`;
@@ -2388,9 +2539,13 @@ async function confirmarEntrega(){
     const {error:e1}=await rpcVersionado('confirmar_entrega_v210','confirmar_entrega_v27',{p_remito_id:remitoActual.id,p_conformidad:confActual,p_obs:gv('f-obs'),p_receptor_nombre:nombre,p_receptor_dni:dni.replace(/\D/g,''),p_firma_url:firmaUrl,p_firma_sha256:firmaSha256,p_foto_entrega_url:fotoEntregaUrl,p_foto_entrega_sha256:fotoEntregaSha256,p_consent:true,p_items:detalle});
     if(e1)throw e1;
     rpcConfirmada=true;
+    limpiarEstadoFormulario();
     await refrescarDatos();
-    remitoActual=remitos.find(r=>String(r.id)===String(remitoActual.id))||remitoActual;
-  }catch(err){if(!rpcConfirmada)await limpiarEvidenciasHuerfanas(subidos);registrarError('confirmar_entrega',err);alert('Error al confirmar: '+(err.message||err));if(btnConf){btnConf.disabled=false;btnConf.innerHTML='<i class="ti ti-signature"></i>Confirmar entrega';}return;}
+    const actualizado=await recargarRemito(remitoActual.id);
+    if(!actualizado)throw new Error('La entrega se cerró, pero no pudimos recargar la constancia. Volvé al historial para verla.');
+    remitoActual=actualizado;
+  }catch(err){if(!rpcConfirmada)await limpiarEvidenciasHuerfanas(subidos);operacionEnCurso=false;registrarError('confirmar_entrega',err);alert('Error al confirmar: '+(err.message||err));if(btnConf){btnConf.disabled=false;btnConf.innerHTML='<i class="ti ti-signature"></i>Confirmar entrega';}return;}
+  operacionEnCurso=false;
   const bd={ok:{ico:'ti ti-circle-check',col:'var(--green)',tit:'Entrega confirmada'},disc:{ico:'ti ti-alert-triangle',col:'var(--red)',tit:'Firmado en disconformidad'},rech:{ico:'ti ti-circle-x',col:'var(--amber)',tit:'Entrega rechazada'}}[confActual];
   const ei=document.getElementById('e-ico');ei.className=bd.ico;ei.style.color=bd.col;
   document.getElementById('e-tit').textContent=bd.tit;
@@ -2431,23 +2586,24 @@ function renderManual(){
 }
 async function handleFotoManual(input){const f=input.files[0];if(!f)return;try{manualFoto=await optimizarFoto(f);}catch(e){alert(e.message);input.value='';return;}const wrap=document.getElementById('fgw');if(wrap){wrap.innerHTML=`<img src="${escAttr(manualFoto)}" alt="Foto del remito firmado" style="width:100%;max-height:220px;object-fit:cover">`;wrap.style.minHeight='auto';}}
 async function guardarManual(){
-  if(!requireOnline())return;
-  if(!exigirPreparacionOperativa())return;
+  if(!await prepararOperacion())return;
+  const modoEsperado=cu.modoPruebaInterna;
   if(!manualFoto){alert('Sacá una foto del remito primero');return;}
   const num=gv('m-num')||'—';const fecha=gv('m-fecha')||hoy();const nota=gv('m-nota');
   const btn=document.getElementById('btn-gm');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  operacionEnCurso=true;
   let path=null,rpcConfirmada=false;
   try{
     const ev=await subirDataURL(`${cu.empresaId}/manual/${crypto.randomUUID()}.jpg`,manualFoto);path=ev.path;
-    const {error}=await rpcVersionado('guardar_remito_manual_v210','guardar_remito_manual_v26',{p_num:num,p_fecha:fecha,p_nota:nota,p_foto_url:path,p_foto_sha256:ev.sha256});
+    const {error}=await sb.rpc('guardar_remito_manual_v211',{p_num:num,p_fecha:fecha,p_nota:nota,p_foto_url:path,p_foto_sha256:ev.sha256,p_modo_prueba:modoEsperado});
     if(error)throw error;
-    rpcConfirmada=true;
+    rpcConfirmada=true;limpiarEstadoFormulario();
     await refrescarDatos();
     document.getElementById('manual-ok-sub').textContent=`N° ${num} · ${fecha}`;
     document.getElementById('manual-ok').style.display='block';
     if(btn)btn.style.display='none';
     manualFoto=null;
-  }catch(err){if(path&&!rpcConfirmada)await limpiarEvidenciasHuerfanas([path]);registrarError('guardar_manual',err);alert('Error al guardar: '+(err.message||err));if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i>Guardar remito manual';}}
+  }catch(err){if(path&&!rpcConfirmada)await limpiarEvidenciasHuerfanas([path]);registrarError('guardar_manual',err);alert('Error al guardar: '+(err.message||err));if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i>Guardar remito manual';}}finally{operacionEnCurso=false;}
 }
 
 /* ===== HISTORIAL ===== */

@@ -1,4 +1,17 @@
-# GoRemitos v2.10 — prueba interna completa
+# GoRemitos v2.11 — experiencia y consistencia
+
+La actualización 2.11 corrige conservación de formularios, pendientes del chofer,
+búsqueda en todo el historial, coherencia del cierre y publicación de archivos.
+
+**Instalación actual:** seguir `INSTALACION-v2.11.md`. Primero aplicar
+`supabase-migration-v2.11.sql`, verificar sus seis controles y después publicar.
+Los pasos v2.10 que siguen son la referencia de la versión anterior.
+
+**Comprobación local:** `npm ci --ignore-scripts`, `npm test`, `npm run build`.
+Vercel publica solamente `dist`. El repositorio contiene material técnico que
+no debe copiarse directamente al directorio público.
+
+Cambios detallados: `CAMBIOS-v2.11.md`.
 
 Esta versión permite probar el circuito persistente con las tres cuentas reales de la empresa —Administrador, Oficina y Chofer— sin confundir la prueba con una entrega operativa.
 

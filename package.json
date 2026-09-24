@@ -1,0 +1,14 @@
+{
+  "name": "goremitos",
+  "version": "2.11.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-static.mjs",
+    "test": "node tests/verificar-logica-v2.7.mjs && node tests/verificar-modo-prueba-v2.10.mjs && node tests/verificar-experiencia-v2.11.mjs && node tests/verificar-base-v2.11.mjs && node tests/verificar-paquete.mjs",
+    "checksums": "node scripts/checksums.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "linkedom": "0.18.13"
+  }
+}

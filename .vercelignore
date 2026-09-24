@@ -1,0 +1,9 @@
+node_modules/
+dist/
+GoRemitos-v2.3-recuperacion/
+*.sql
+*.md
+!THIRD-PARTY-NOTICES.md
+tests/
+CHECKSUMS-SHA256.txt
+.git/

@@ -70,7 +70,7 @@ for(const [nombre,blob,mime,esperado] of archivos){
 
 const evento=f.js("O'Brien & <script>");
 assert(!/[&'<>]/.test(evento),'El escape de eventos deja delimitadores HTML');
-assert(f.telWA('011 15-1234-5678')==='549111512345678','Normalización telefónica inesperada');
+assert(f.telWA('011 15-1234-5678')==='5491112345678','El teléfono no debe conservar el prefijo local 15');
 assert(f.claveEstadoVisual({estado:'Pendiente',salidaAt:null})==='Programado','Pendiente sin salida no es Programado');
 assert(f.claveEstadoVisual({estado:'Pendiente',salidaAt:'2026-09-02T10:00:00Z'})==='EnCamino','Pendiente con salida no es EnCamino');
 assert(f.nivelSeguimiento('Programado')===1&&f.nivelSeguimiento('En camino')===2&&f.nivelSeguimiento('Entregado')===3,'Progreso público incorrecto');

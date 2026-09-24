@@ -10,13 +10,13 @@ const migration=read('supabase-migration-v2.10.sql');
 const verification=read('supabase-verificacion-v2.10.sql');
 
 for(const token of [
-  "const APP_VERSION='2.10.0'",
+  "const APP_VERSION='2.11.0'",
   "rpc('obtener_modo_prueba_empresa_v210'",
   "rpc('actualizar_modo_prueba_empresa_v210'",
-  "rpcVersionado('guardar_remito_v210','guardar_remito_v27'",
+  "rpc('guardar_remito_v211'",
   "rpcVersionado('marcar_en_camino_v210','marcar_en_camino_v27'",
   "rpcVersionado('confirmar_entrega_v210','confirmar_entrega_v27'",
-  "rpcVersionado('guardar_remito_manual_v210','guardar_remito_manual_v26'",
+  "rpc('guardar_remito_manual_v211'",
   "rpcVersionado('obtener_seguimiento_publico_v210','obtener_seguimiento_publico_v27'",
   'Modo de prueba interna activo',
   'Usá solamente datos ficticios',
