@@ -506,6 +506,7 @@ body.modal-open{overflow:hidden}
     <div class="tracking-card" id="tracking-card" aria-live="polite">
       <div style="text-align:center;color:var(--tx3);font-size:13px">Consultando el estado…</div>
     </div>
+    <div id="tracking-connection" role="status" hidden style="margin-top:14px;color:var(--amber);font-size:13px;line-height:1.5"></div>
     <div class="a-footer" style="margin:18px auto 0">Este enlace sólo muestra el estado operativo. No expone domicilio, teléfono, mercadería, documento, firma ni datos del receptor. · <a class="link-btn" href="/privacidad.html">Privacidad</a></div>
   </div>
 </div>
@@ -1001,14 +1002,23 @@ async function cargarRemitos({reset=true}={}){
   if(cu!==usuario)return false;
   if(error){console.error(error);cargaRemitosError=error;registrarError('cargar_remitos',error);return false;}
   const nuevos=(data||[]).map(mapearRemito);
+  integrarRemitosActualizados(nuevos);
   remitosPaginados=reset?nuevos:remitosPaginados.concat(nuevos.filter(n=>!remitosPaginados.some(r=>String(r.id)===String(n.id))));
   totalRemitosDisponibles=Number(count??remitosPaginados.length);hayMasRemitos=remitosPaginados.length<totalRemitosDisponibles;cargaRemitosError=null;
   reunirRemitos();
   return true;
 }
 function reunirRemitos(){
-  const registros=[...(resultadosBusqueda||[]),...(remitoObjetivo?[remitoObjetivo]:[]),...remitosPaginados,...entregasPendientes];
+  const registros=[...remitosPaginados,...entregasPendientes,...(resultadosBusqueda||[]),...(remitoObjetivo?[remitoObjetivo]:[])];
   remitos=[...new Map(registros.map(r=>[String(r.id),r])).values()];
+}
+function integrarRemitosActualizados(nuevos){
+  const mapa=new Map(nuevos.map(r=>[String(r.id),r]));
+  const actualizar=r=>mapa.get(String(r.id))||r;
+  remitosPaginados=remitosPaginados.map(actualizar);
+  entregasPendientes=entregasPendientes.map(actualizar);
+  if(resultadosBusqueda)resultadosBusqueda=resultadosBusqueda.map(actualizar);
+  if(remitoObjetivo)remitoObjetivo=actualizar(remitoObjetivo);
 }
 async function cargarPendientesChofer({reset=true}={}){
   if(cu?.rol!=='chofer'){entregasPendientes=[];totalPendientesChofer=0;reunirRemitos();return true;}
@@ -1017,6 +1027,7 @@ async function cargarPendientesChofer({reset=true}={}){
   if(cu!==usuario)return false;
   if(error){cargaRemitosError=error;registrarError('cargar_pendientes',error);return false;}
   const nuevos=(data||[]).map(mapearRemito);
+  integrarRemitosActualizados(nuevos);
   entregasPendientes=reset?nuevos:entregasPendientes.concat(nuevos.filter(n=>!entregasPendientes.some(r=>r.id===n.id)));
   totalPendientesChofer=Number(count??entregasPendientes.length);reunirRemitos();return true;
 }
@@ -1164,6 +1175,10 @@ function toggleTheme(){
 applyTheme(localStorage.getItem('grm_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'));
 
 let seguimientoInterval=null;
+function avisoConexionSeguimiento(mensaje=''){
+  const aviso=document.getElementById('tracking-connection');if(!aviso)return;
+  aviso.textContent=mensaje;aviso.hidden=!mensaje;
+}
 function fechaPublica(fecha){if(!fecha)return '—';const [a,m,d]=String(fecha).slice(0,10).split('-');return a&&m&&d?`${d}/${m}/${a}`:String(fecha);}
 function fechaHoraPublica(valor){return valor?new Date(valor).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}):'—';}
 function nivelSeguimiento(estado){return estado==='Programado'?1:estado==='En camino'?2:3;}
@@ -1174,11 +1189,14 @@ async function cargarSeguimientoPublico(silencioso=false){
     card.innerHTML='<div class="banner" style="margin:0"><i class="ti ti-link-off" style="color:var(--red)"></i><div class="banner-tit">Enlace inválido</div><div class="banner-sub">Pedile a la empresa que vuelva a compartir el seguimiento.</div></div>';return;
   }
   if(!silencioso)card.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:13px">Consultando el estado…</div>';
-  const {data,error}=await rpcVersionado('obtener_seguimiento_publico_v210','obtener_seguimiento_publico_v27',{p_token:tokenSeguimiento});
+  let data,error;
+  try{({data,error}=await rpcVersionado('obtener_seguimiento_publico_v210','obtener_seguimiento_publico_v27',{p_token:tokenSeguimiento}));}catch(fallo){error=fallo;}
   if(error){
+    avisoConexionSeguimiento('No pudimos actualizar el seguimiento. El estado mostrado puede haber cambiado. Volveremos a consultar al recuperar la conexión.');
     if(!silencioso)card.innerHTML=`<div class="banner" style="margin:0"><i class="ti ti-wifi-off" style="color:var(--amber)"></i><div class="banner-tit">No pudimos consultar la entrega</div><div class="banner-sub">Revisá tu conexión e intentá nuevamente.</div></div><button type="button" class="btn bl" style="margin-top:14px" onclick="cargarSeguimientoPublico()">Reintentar</button>`;
     return;
   }
+  avisoConexionSeguimiento();
   const r=Array.isArray(data)?data[0]:data;
   if(!r){card.innerHTML='<div class="banner" style="margin:0"><i class="ti ti-file-search" style="color:var(--tx3)"></i><div class="banner-tit">Entrega no encontrada</div><div class="banner-sub">El enlace pudo haber sido copiado incompleto.</div></div>';return;}
   const nivel=nivelSeguimiento(r.estado),color=r.estado==='Rechazado'?'var(--red)':r.estado==='Entregado con observaciones'?'var(--amber)':r.estado==='Entregado'?'var(--green)':'var(--or)';
@@ -1496,11 +1514,12 @@ async function cancelPasswordRecovery(){
   await sb.auth.signOut();recoveryMode=false;localStorage.removeItem('grm_recovery_pending');history.replaceState({},document.title,window.location.pathname);showView('view-login');
 }
 async function doLogout(){
-  if(!puedeSalirDelFormulario())return;
+  if(!puedeSalirDelFormulario())return false;
   if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
   closeProfile();
   sessionStorage.removeItem('grm_oauth_return');await sb.auth.signOut();cu=null;remitos=[];remitosPaginados=[];entregasPendientes=[];resultadosBusqueda=null;remitoObjetivo=null;busquedaRemitos='';filtro='todos';busquedaSecuencia++;limpiarEstadoFormulario();estadoPerfil='sin_sesion';
   if(clockInterval)clearInterval(clockInterval);if(accessCheckInterval)clearInterval(accessCheckInterval);if(idleInterval)clearInterval(idleInterval);accessCheckInterval=null;idleInterval=null;showView('view-welcome');
+  return true;
 }
 async function cerrarPorAccesoEliminado(){
   if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null;}
@@ -1541,7 +1560,7 @@ function iniciarControlInactividad(){
   if(idleInterval)clearInterval(idleInterval);
   idleInterval=setInterval(async()=>{
     if(!cu)return;const limite=cu.rol==='chofer'?8*60*60*1000:2*60*60*1000;
-    if(Date.now()-ultimaActividad>limite){await doLogout();showView('view-login');showErr('log-err','La sesión se cerró por inactividad.');}
+    if(Date.now()-ultimaActividad>limite){if(await doLogout()){showView('view-login');showErr('log-err','La sesión se cerró por inactividad.');}else ultimaActividad=Date.now();}
   },60000);
 }
 ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{ultimaActividad=Date.now();},{passive:true}));
@@ -1549,6 +1568,7 @@ function iniciarRealtime(){
   if(realtimeChannel)return;
   realtimeChannel=sb.channel(`remitos-${cu.empresaId}`).on('postgres_changes',{event:'*',schema:'public',table:'remitos',filter:`empresa_id=eq.${cu.empresaId}`},async()=>{
     const [ok]=await refrescarDatos();
+    if(ok&&['remitos','historial'].includes(tabActual)&&usaBusquedaRemota()){await buscarRemitos();return;}
     if(ok&&(['dash','remitos','historial'].includes(tabActual)||(tabActual==='entrega'&&!entregaSeleccionadaId)))goTab(tabActual);
   }).subscribe(status=>{
     const bar=document.getElementById('realtime-bar');
@@ -1559,8 +1579,8 @@ function startClock(){
   function tick(){const now=new Date();const ct=document.getElementById('clock-time');const cd=document.getElementById('clock-date');if(ct)ct.textContent=[now.getHours(),now.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');if(cd)cd.textContent=`${DIAS[now.getDay()].slice(0,3)} ${now.getDate()} ${MESES[now.getMonth()].slice(0,3)}`;}
   tick();if(clockInterval)clearInterval(clockInterval);clockInterval=setInterval(tick,15000);
 }
-window.addEventListener('online',()=>{isOnline=true;document.getElementById('offline-bar')?.classList.remove('show');const sync=document.getElementById('sync-bar');if(sync){sync.classList.add('show');setTimeout(()=>sync.classList.remove('show'),3000);}verificarAccesoVigente();});
-window.addEventListener('offline',()=>{isOnline=false;document.getElementById('offline-bar')?.classList.add('show');});
+window.addEventListener('online',()=>{isOnline=true;document.getElementById('offline-bar')?.classList.remove('show');const sync=document.getElementById('sync-bar');if(sync){sync.classList.add('show');setTimeout(()=>sync.classList.remove('show'),3000);}if(tokenSeguimiento)cargarSeguimientoPublico(true);else verificarAccesoVigente();});
+window.addEventListener('offline',()=>{isOnline=false;document.getElementById('offline-bar')?.classList.add('show');if(tokenSeguimiento)avisoConexionSeguimiento('Sin conexión. El estado mostrado es la última información consultada.');});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verificarAccesoVigente();});
 
 /* ===== NAV ===== */
@@ -1750,6 +1770,7 @@ async function buscarRemitos(reset=true){
     if(cu!==usuario||secuencia!==busquedaSecuencia)return;
     if(error)throw error;
     const nuevos=(data||[]).map(mapearRemito);
+    integrarRemitosActualizados(nuevos);
     resultadosBusqueda=reset?nuevos:[...(resultadosBusqueda||[]),...nuevos.filter(n=>!resultadosBusqueda.some(r=>r.id===n.id))];
     totalBusqueda=Number(count??resultadosBusqueda.length);reunirRemitos();
   }catch(error){if(cu!==usuario||secuencia!==busquedaSecuencia)return;errorBusqueda=String(error.message||error);}
@@ -1799,6 +1820,8 @@ async function eliminarRemito(id){
 /* ===== DETALLE ===== */
 async function verDetalle(id){
   const original=remitos.find(x=>String(x.id)===String(id));if(!original)return;
+  if(!puedeSalirDelFormulario())return;
+  limpiarEstadoFormulario();
   remitoActual=original;
   const baseItems=original.itemsEstado||original.items||[];
   const itemsVista=await Promise.all(baseItems.map(async it=>({...it,foto:await evidenciaUrl(it.foto)})));
@@ -2227,7 +2250,7 @@ async function handleDocumentoNuevo(input){
   const file=input.files?.[0];if(!file)return;
   try{const info=validarDocumento(file);await verificarContenidoDocumento(file,info.mime);documentoNuevo=file;renderDocumentoFormulario(editandoId!==null?remitos.find(x=>String(x.id)===String(editandoId)):null);}catch(e){alert(e.message);input.value='';documentoNuevo=null;renderDocumentoFormulario(editandoId!==null?remitos.find(x=>String(x.id)===String(editandoId)):null);}
 }
-function quitarDocumentoNuevo(){documentoNuevo=null;const input=document.getElementById('f-documento');if(input)input.value='';renderDocumentoFormulario(editandoId!==null?remitos.find(x=>String(x.id)===String(editandoId)):null);}
+function quitarDocumentoNuevo(){documentoNuevo=null;marcarFormularioEditado();const input=document.getElementById('f-documento');if(input)input.value='';renderDocumentoFormulario(editandoId!==null?remitos.find(x=>String(x.id)===String(editandoId)):null);}
 async function cargarChoferes(seleccionado=''){
   const select=document.getElementById('f-chofer'),ayuda=document.getElementById('f-chofer-ayuda');if(!select)return;
   const {data,error}=await sb.from('perfiles').select('id,nombre,rol,activo').eq('empresa_id',cu.empresaId).eq('rol','chofer').eq('activo',true).order('nombre');
@@ -2266,8 +2289,8 @@ async function guardarRemito(){
   }catch(error){if(documentoSubido)await limpiarDocumentosHuerfanos([documentoSubido]);operacionEnCurso=false;registrarError('guardar_remito',error);alert('No se pudo confirmar el guardado: '+(error.message||error)+'. Tus datos siguen en el formulario.');setBusy(btn,false,eraEdicion?'Guardar cambios':cu.modoPruebaInterna?'Programar prueba':'Programar entrega');return;}
   limpiarEstadoFormulario();
   await refrescarDatos();
-  operacionEnCurso=false;
   remitoActual=await recargarRemito(remId);editandoId=null;documentoNuevo=null;
+  operacionEnCurso=false;
   const r=remitoActual;
   if(!r){alert('El remito se guardó, pero no se pudo recargar. Volvé a Remitos.');goTab('remitos');return;}
   document.querySelector('#nv-ok .banner-tit').textContent=r.esPrueba?(eraEdicion?'Prueba actualizada':'Prueba programada'):(eraEdicion?'Entrega actualizada':'Entrega programada');

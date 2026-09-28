@@ -4,11 +4,11 @@ import {webcrypto} from 'node:crypto';
 import {parseHTML} from 'linkedom';
 
 export const source=fs.readFileSync(new URL('../../index.html',import.meta.url),'utf8');
-export function appContext(){
+export function appContext(pageUrl='https://goremitos.example/'){
   const {window,document}=parseHTML(source);
   const messages=[],timers=[];
   const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)};};
-  const location=new URL('https://goremitos.example/');
+  const location=new URL(pageUrl);
   Object.assign(window,{location,scrollTo(){},matchMedia:()=>({matches:false}),confirm:()=>false,alert:message=>messages.push(message)});
   const ctx={window,document,location,navigator:{onLine:true,userAgent:'GoRemitos isolated test'},localStorage:storage(),sessionStorage:storage(),URL,URLSearchParams,Blob,File,Uint8Array,Response,Request,crypto:webcrypto,console:{error(){},warn(){},log(){}},alert:message=>messages.push(message),confirm:()=>false,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},setInterval:()=>1,clearInterval(){},fetch:()=>{throw new Error('Network forbidden in isolated tests');}};
   vm.createContext(ctx);

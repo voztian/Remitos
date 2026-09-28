@@ -19,6 +19,8 @@ ctx.networkOk=true;await run('verificarAccesoVigente()');
 assert.equal(document.getElementById('f-cli').value,'CLIENTE FICTICIO');
 assert(!document.getElementById('btn-guardar-remito').disabled);
 run("goTab('remitos')");assert.equal(run('tabActual'),'nuevo','Cancelar salida no conservó el formulario');
+assert.equal(await run('doLogout()'),false,'Cancelar salida no conservó la sesión');
+assert.equal(run('cu.id'),'office');
 run("limpiarEstadoFormulario();goTab('remitos')");assert.equal(run('tabActual'),'remitos');
 
 const driver=appContext(),log=[];
@@ -40,6 +42,17 @@ assert(queries.some(x=>x[0]==='or'&&x[1].includes('\\"test\\"')),'La búsqueda n
 assert.equal(search.run('totalBusqueda'),101);
 assert.equal(search.run('resultadosBusqueda.length'),100);
 await search.run('buscarRemitos(false)');assert.equal(search.run('resultadosBusqueda.length'),101);
+search.run("remitoObjetivo={id:'closed-0',estado:'Pendiente'};resultadosBusqueda=[{id:'closed-0',estado:'Pendiente'}];integrarRemitosActualizados([{id:'closed-0',estado:'Firmado'}]);reunirRemitos();");
+assert.equal(search.run("remitos.find(r=>r.id==='closed-0').estado"),'Firmado','Una copia vieja tapó la actualización');
+
+const tracking=appContext('https://goremitos.example/#seguimiento=00000000-0000-4000-8000-000000000001');
+tracking.ctx.mockRpc=async()=>({data:[{numero:'FICTICIO',empresa:'QA',estado:'Programado',fecha:'2026-09-24'}],error:null});
+tracking.run('sb={rpc:mockRpc}');await tracking.run('cargarSeguimientoPublico()');
+assert(tracking.document.getElementById('tracking-card').textContent.includes('Programado'));
+tracking.ctx.mockRpc=async()=>{throw new Error('network failure');};
+tracking.run('sb={rpc:mockRpc}');await tracking.run('cargarSeguimientoPublico(true)');
+assert(tracking.document.getElementById('tracking-card').textContent.includes('Programado'),'Se perdió el último estado');
+assert(!tracking.document.getElementById('tracking-connection').hidden,'El seguimiento ocultó la pérdida de conexión');
 
 assert.equal(run("telWA('011 15-1234-5678')"),'5491112345678');
 assert.equal(run("telWA('+54 9 11 1234-5678')"),'5491112345678');
