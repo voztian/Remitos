@@ -2364,6 +2364,7 @@ function abrirEntrega(id){
   if(!r){alert('Esta entrega no está disponible para tu usuario.');return;}
   entregaSeleccionadaId=r.id;resetEntregaState();
   document.getElementById('main-content').innerHTML=contenidoConModoPrueba(renderEntregaDetalle(r,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length));
+  asociarEtiquetas(document.getElementById('main-content'));
   window.scrollTo(0,0);
 }
 function volverEntregas(){if(!puedeSalirDelFormulario())return;limpiarEstadoFormulario();entregaSeleccionadaId=null;resetEntregaState();goTab('entrega');}
@@ -2372,11 +2373,15 @@ async function iniciarEntrega(id){
   const rem=remitos.find(x=>String(x.id)===String(id));if(!rem||rem.estado!=='Pendiente')return;
   if(!rem.documentoUrl){alert('La oficina debe adjuntar el remito original antes de iniciar el viaje.');return;}
   if(!confirm(`¿Iniciar ahora el viaje del remito N° ${rem.num}?\n\nDesde este momento figurará “En camino” y ya no podrá editarse ni eliminarse.`))return;
-  const btn=document.getElementById('btn-iniciar-entrega');setBusy(btn,true,'Iniciando...');
-  const {error}=await rpcVersionado('marcar_en_camino_v210','marcar_en_camino_v27',{p_remito_id:id});
-  if(error){alert('No se pudo iniciar: '+error.message);setBusy(btn,false,'Iniciar viaje');return;}
-  await refrescarDatos();const actualizado=remitos.find(x=>String(x.id)===String(id));
-  if(!actualizado){volverEntregas();return;}entregaSeleccionadaId=actualizado.id;resetEntregaState();document.getElementById('main-content').innerHTML=contenidoConModoPrueba(renderEntregaDetalle(actualizado,remitos.filter(x=>x.estado==='Pendiente'&&String(x.chofer_id)===String(cu.id)).length));window.scrollTo(0,0);
+  const btn=document.getElementById('btn-iniciar-entrega');setBusy(btn,true,'Iniciando...');operacionEnCurso=true;let inicioConfirmado=false;
+  try{
+    const {error}=await rpcVersionado('marcar_en_camino_v210','marcar_en_camino_v27',{p_remito_id:id});if(error)throw error;
+    inicioConfirmado=true;
+    await refrescarDatos();const actualizado=await recargarRemito(id);
+    if(!actualizado)throw new Error('No pudimos actualizar el estado del viaje.');
+    entregaSeleccionadaId=actualizado.id;resetEntregaState();document.getElementById('main-content').innerHTML=contenidoConModoPrueba(renderEntregaDetalle(actualizado,entregasPendientes.length));asociarEtiquetas(document.getElementById('main-content'));window.scrollTo(0,0);
+  }catch(error){registrarError('iniciar_entrega',error);alert(inicioConfirmado?'El inicio del viaje ya quedó registrado. Volvé a Mis entregas para actualizar la pantalla.':'No se pudo iniciar: '+(error.message||error));setBusy(btn,false,'Iniciar viaje');}
+  finally{operacionEnCurso=false;}
 }
 function renderEntregaDetalle(rem,totalPendientes=1){
   remitoActual=rem;
@@ -2567,7 +2572,7 @@ async function confirmarEntrega(){
     const actualizado=await recargarRemito(remitoActual.id);
     if(!actualizado)throw new Error('La entrega se cerró, pero no pudimos recargar la constancia. Volvé al historial para verla.');
     remitoActual=actualizado;
-  }catch(err){if(!rpcConfirmada)await limpiarEvidenciasHuerfanas(subidos);operacionEnCurso=false;registrarError('confirmar_entrega',err);alert('Error al confirmar: '+(err.message||err));if(btnConf){btnConf.disabled=false;btnConf.innerHTML='<i class="ti ti-signature"></i>Confirmar entrega';}return;}
+  }catch(err){if(!rpcConfirmada)await limpiarEvidenciasHuerfanas(subidos);operacionEnCurso=false;registrarError('confirmar_entrega',err);if(rpcConfirmada){alert('La entrega ya quedó guardada. No pudimos actualizar la pantalla; consultá la constancia en Historial.');goTab('historial');return;}alert('Error al confirmar: '+(err.message||err));if(btnConf){btnConf.disabled=false;btnConf.innerHTML='<i class="ti ti-signature"></i>Confirmar entrega';}return;}
   operacionEnCurso=false;
   const bd={ok:{ico:'ti ti-circle-check',col:'var(--green)',tit:'Entrega confirmada'},disc:{ico:'ti ti-alert-triangle',col:'var(--red)',tit:'Firmado en disconformidad'},rech:{ico:'ti ti-circle-x',col:'var(--amber)',tit:'Entrega rechazada'}}[confActual];
   const ei=document.getElementById('e-ico');ei.className=bd.ico;ei.style.color=bd.col;
@@ -2587,6 +2592,8 @@ async function confirmarEntrega(){
     <div class="tl-step"><div class="tl-dot ${rech?'tl-rech':'tl-done'}"><i class="ti ${rech?'ti-x':'ti-signature'}"></i></div><span class="tl-lbl on">${rech?'Rechazado':'Entregado'}</span></div>`;
   }
   document.getElementById('entrega-ok').style.display='block';
+  const estadoCabecera=document.querySelector('#main-content .pagehead .status');if(estadoCabecera)estadoCabecera.outerHTML=statusPill(remitoActual);
+  document.getElementById('entrega-ok').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 /* ===== MANUAL ===== */
@@ -2650,7 +2657,7 @@ async function bajarPDF(){
     function header(){doc.setFillColor(255,255,255);doc.rect(0,0,W,H,'F');doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(...OR);doc.text('Go',m,18);doc.setTextColor(...TX);doc.text('Remitos',m+doc.getTextWidth('Go'),18);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...GR);doc.text(`${rem.esPrueba?'PRUEBA INTERNA · ':''}Remito externo N° ${String(rem.num||'—')}`,W-m,18,{align:'right'});doc.setDrawColor(...LN);doc.line(m,24,W-m,24);y=31;}
     function espacio(h){if(y+h>274){doc.addPage();header();}}
     function textoEnvuelto(txt,x,maxW,size=10,style='normal',color=TX){doc.setFont('helvetica',style);doc.setFontSize(size);doc.setTextColor(...color);const lines=doc.splitTextToSize(String(txt||''),maxW),h=Math.max(5,lines.length*(size*.38+1));espacio(h);doc.text(lines,x,y);y+=h;}
-    function campo(label,value){if(value===null||value===undefined||value===''||value==='—')return;const lines=doc.splitTextToSize(String(value),W-m*2-40);const h=Math.max(7,lines.length*5);espacio(h);doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...GR);doc.text(label.toUpperCase(),m,y);doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...TX);doc.text(lines,m+40,y);y+=h;}
+    function campo(label,value){if(value===null||value===undefined||value===''||value==='—')return;doc.setFont('helvetica','normal');doc.setFontSize(10);const lines=doc.splitTextToSize(String(value),W-m*2-40);const h=Math.max(7,lines.length*5);espacio(h);doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...GR);doc.text(label.toUpperCase(),m,y);doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...TX);doc.text(lines,m+40,y);y+=h;}
     function formato(data){if(/^data:image\/png/i.test(data))return 'PNG';if(/^data:image\/webp/i.test(data))return 'WEBP';return 'JPEG';}
     function agregarImagen(data,maxH=55){if(!data)return;const props=doc.getImageProperties(data),maxW=W-m*2-4,ratio=props.width/props.height;let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio;}espacio(h+6);const x=(W-w)/2;doc.setDrawColor(...LN);doc.roundedRect(x-1,y-1,w+2,h+2,1.5,1.5,'S');doc.addImage(data,formato(data),x,y,w,h);y+=h+6;}
     header();
@@ -2678,7 +2685,7 @@ async function bajarPDF(){
       if(rem.firma){try{agregarImagen(await imagenDataURL(rem.firma,rem.firmaSha256),30);}catch(e){console.warn('firma',e);evidenciasFaltantes.push('firma');}}
       if(rem.tsFirma){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(`Registrado: ${new Date(rem.tsFirma).toLocaleString('es-AR')}`,m,y);y+=5;}
     }
-    if(rem.evidenceHash){espacio(18);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GR);doc.text('HASH DE LA CONSTANCIA',m,y);y+=4;textoEnvuelto(rem.evidenceHash,m,W-m*2,6.5,'normal',GR);}
+    if(rem.evidenceHash){espacio(12);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GR);doc.text('HASH DE LA CONSTANCIA',m,y);y+=4;textoEnvuelto(rem.evidenceHash,m,W-m*2,6.5,'normal',GR);}
     for(const ev of rem.snapshot?.evidencias||[]){const archivo=ev?.archivo||{};if(!archivo.sha256)continue;espacio(13);textoEnvuelto(`${ev.tipo||'evidencia'}${ev.item_id?' · '+ev.item_id:''}: ${archivo.sha256}`,m,W-m*2,6.2,'normal',GR);}
     if(evidenciasFaltantes.length)throw new Error(`No se generó un comprobante incompleto. No pudimos verificar: ${evidenciasFaltantes.join(', ')}`);
     const pages=doc.getNumberOfPages();for(let p=1;p<=pages;p++){doc.setPage(p);doc.setDrawColor(...LN);doc.line(m,282,W-m,282);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(`${rem.esPrueba?'PRUEBA INTERNA · ':''}Constancia digital de seguimiento y entrega · Página ${p} de ${pages}`,m,288);doc.text('goremitos.vercel.app',W-m,288,{align:'right'});}

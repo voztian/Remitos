@@ -54,9 +54,39 @@ tracking.run('sb={rpc:mockRpc}');await tracking.run('cargarSeguimientoPublico(tr
 assert(tracking.document.getElementById('tracking-card').textContent.includes('Programado'),'Se perdió el último estado');
 assert(!tracking.document.getElementById('tracking-connection').hidden,'El seguimiento ocultó la pérdida de conexión');
 
+// Un cierre confirmado sigue siendo un éxito aunque se corte la consulta posterior.
+// No debe ofrecer otra confirmación ni eliminar evidencia ya vinculada.
+const closed=appContext();
+closed.run(`cu={id:'driver',rol:'chofer',empresaId:'company',modoPruebaEstado:'ok',modoPruebaInterna:true};
+  showView('view-app');tabActual='entrega';
+  remitoActual={id:'delivery',estado:'Pendiente',salidaAt:'2026-09-28T12:00:00Z',items:[{id:'item',desc:'Mercadería ficticia',qty:1}]};
+  document.getElementById('main-content').innerHTML=renderEntregaDetalle(remitoActual);
+  prepararOperacion=async()=>true;rpcVersionado=async()=>({error:null});
+  refrescarDatos=async()=>{throw new Error('Connection lost after commit');};
+  registrarError=()=>{};limpiarEvidenciasHuerfanas=async()=>{throw new Error('Must not delete committed evidence');};
+  confActual='rech';itemsEstado=[{id:'item',qty:1,qtyRecibida:0,estado:'miss'}];
+  document.getElementById('f-rxn').value='Receptor ficticio';document.getElementById('f-rxd').value='12345678';
+  document.getElementById('f-consent').checked=true;document.getElementById('f-obs').value='Rechazo de prueba';`);
+await closed.run('confirmarEntrega()');
+assert.equal(closed.run('tabActual'),'historial');
+assert.equal(closed.run('operacionEnCurso'),false);
+assert(closed.messages.some(message=>message.includes('ya quedó guardada')));
+assert(!closed.document.getElementById('firma-sec'),'El cierre guardado volvió a ofrecer confirmación');
+
+const starting=appContext();
+starting.run(`cu={id:'driver',rol:'chofer',empresaId:'company'};showView('view-app');tabActual='entrega';
+  remitos=[{id:'delivery',num:'FICTICIO',estado:'Pendiente',documentoUrl:'private/document.pdf'}];
+  document.getElementById('main-content').innerHTML='<button id="btn-iniciar-entrega">Iniciar viaje</button>';
+  prepararOperacion=async()=>true;confirm=()=>true;registrarError=()=>{};
+  rpcVersionado=async()=>{goTab('historial');throw new Error('Network interrupted');};`);
+await starting.run("iniciarEntrega('delivery')");
+assert.equal(starting.run('tabActual'),'entrega','Se permitió abandonar la pantalla durante el inicio');
+assert.equal(starting.run('operacionEnCurso'),false);
+assert(!starting.document.getElementById('btn-iniciar-entrega').disabled,'No se recuperó el botón tras el fallo');
+
 assert.equal(run("telWA('011 15-1234-5678')"),'5491112345678');
 assert.equal(run("telWA('+54 9 11 1234-5678')"),'5491112345678');
 assert.equal(run("telWA('123')"),'');
 assert.equal(run("telWA('+598 99 123 456')"),'59899123456');
 
-console.log('EXPERIENCIA v2.11 OK: tema, conservación de formulario, reconexión, permisos de guardado, pendientes antiguos, búsqueda paginada y teléfonos.');
+console.log('EXPERIENCIA v2.11 OK: tema, conservación de formulario, reconexión, permisos de guardado, pendientes antiguos, búsqueda paginada, inicio, cierre confirmado y teléfonos.');

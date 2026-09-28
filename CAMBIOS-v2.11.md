@@ -11,6 +11,8 @@
 - El servidor valida el dígito verificador del CUIT para habilitar operación real.
 - Los teléfonos argentinos con prefijo local 15 se normalizan; los incompletos no abren un destinatario incorrecto en WhatsApp.
 - El generador PDF permite reintentar si falla la carga de su biblioteca.
+- El inicio del viaje bloquea la navegación mientras guarda y recupera el botón si falla la conexión. El cierre actualiza el estado de la cabecera y lleva a la constancia; si la escritura ya fue confirmada pero falla la recarga, informa que quedó guardada y evita ofrecer un segundo cierre.
+- Los campos de receptor conservan sus etiquetas accesibles al abrir la entrega. El PDF mide los valores con su fuente final y reduce saltos de página innecesarios.
 - La publicación usa una lista explícita de archivos. No expone migraciones, documentación, pruebas ni la aplicación vieja.
 - Pruebas de funciones, DOM y PostgreSQL en memoria con datos ficticios. Banco visual separado disponible solamente en deployments de preview.
 
