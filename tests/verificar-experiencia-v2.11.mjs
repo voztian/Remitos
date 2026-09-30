@@ -84,6 +84,24 @@ assert.equal(starting.run('tabActual'),'entrega','Se permitió abandonar la pant
 assert.equal(starting.run('operacionEnCurso'),false);
 assert(!starting.document.getElementById('btn-iniciar-entrega').disabled,'No se recuperó el botón tras el fallo');
 
+// La creación confirmada debe liberar la navegación si falla la recarga posterior.
+const created=appContext();
+created.run(`cu={id:'office',rol:'oficina',empresaId:'company',modoPruebaEstado:'ok',modoPruebaInterna:true};
+  showView('view-app');goTab('nuevo');prepararOperacion=async()=>true;
+  usuariosEmpresa=[{id:'driver',nombre:'Chofer ficticio'}];
+  document.getElementById('f-chofer').innerHTML='<option value="driver" selected>Chofer ficticio</option>';
+  document.getElementById('f-cli').value='Cliente ficticio';document.getElementById('f-num').value='PRUEBA';document.getElementById('f-dir').value='Direccion ficticia';
+  itemsActual=[{cod:'QA',desc:'Mercaderia ficticia',qty:1}];documentoNuevo=new Blob(['ficticio']);
+  subirDocumentoRemito=async()=>({path:'private/document.pdf',sha256:'a'.repeat(64),nombre:'ficticio.pdf',mime:'application/pdf',size:100});
+  sb={rpc:async()=>({data:'created-remito',error:null})};
+  refrescarDatos=async()=>{throw new Error('Connection lost after commit');};registrarError=()=>{};
+  limpiarDocumentosHuerfanos=async()=>{throw new Error('Must not remove the committed document');};`);
+await created.run('guardarRemito()');
+assert.equal(created.run('operacionEnCurso'),false,'El guardado confirmado dejó bloqueada la navegación');
+assert.equal(created.run('tabActual'),'remitos');
+assert.equal(created.run('documentoNuevo'),null);
+assert(created.messages.some(message=>message.includes('ya quedó guardado')));
+
 assert.equal(run("telWA('011 15-1234-5678')"),'5491112345678');
 assert.equal(run("telWA('+54 9 11 1234-5678')"),'5491112345678');
 assert.equal(run("telWA('123')"),'');

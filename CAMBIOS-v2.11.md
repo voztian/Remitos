@@ -17,3 +17,9 @@
 - Pruebas de funciones, DOM y PostgreSQL en memoria con datos ficticios. Banco visual separado disponible solamente en deployments de preview.
 
 No se introducen emisión fiscal, geolocalización, envíos automáticos ni guardado sin conexión.
+
+## Ajustes 2.11.1 — prueba en producción
+
+- La creación confirmada libera la navegación aunque falle la consulta posterior. Avisa que el remito ya se guardó y evita presentar el mismo formulario como pendiente de guardar.
+- Los archivos vacíos tienen un mensaje específico, separado del límite de 10 MB.
+- Los horarios se muestran expresamente en formato de 24 horas, conservando la zona horaria del dispositivo.

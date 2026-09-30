@@ -10,7 +10,7 @@ const migration=read('supabase-migration-v2.10.sql');
 const verification=read('supabase-verificacion-v2.10.sql');
 
 for(const token of [
-  "const APP_VERSION='2.11.0'",
+  "const APP_VERSION='2.11.1'",
   "rpc('obtener_modo_prueba_empresa_v210'",
   "rpc('actualizar_modo_prueba_empresa_v210'",
   "rpc('guardar_remito_v211'",

@@ -662,7 +662,7 @@ body.modal-open{overflow:hidden}
 <script src="/qrcode-1.0.0.min.js"></script>
 <script>
 /* ===== SUPABASE ===== */
-const APP_VERSION='2.11.0';
+const APP_VERSION='2.11.1';
 const SUPABASE_URL='https://ospgkovvqqaaebzswngv.supabase.co';
 const SUPABASE_KEY='sb_publishable_Y66zEF0bcef_BRtlbJYIDg_9QrqLiuu';
 const RECOVERY_RETURN=(()=>{const h=new URLSearchParams(window.location.hash.replace(/^#/,'')),q=new URLSearchParams(window.location.search);return h.get('type')==='recovery'||q.get('type')==='recovery';})();
@@ -847,7 +847,8 @@ function validarDocumento(file){
   const ext=String(file.name||'').split('.').pop().toLowerCase();
   const extensiones={'application/pdf':['pdf'],'image/jpeg':['jpg','jpeg'],'image/png':['png'],'image/webp':['webp']};
   if(!extensiones[mime]?.includes(ext))throw new Error('La extensión del archivo no coincide con el tipo informado. Exportá nuevamente el remito como PDF o imagen.');
-  if(file.size<=0||file.size>MAX_DOCUMENTO_BYTES)throw new Error('El remito original debe pesar como máximo 10 MB.');
+  if(file.size<=0)throw new Error('El archivo está vacío o no se pudo leer. Volvé a seleccionarlo o exportá nuevamente el remito.');
+  if(file.size>MAX_DOCUMENTO_BYTES)throw new Error('El remito original debe pesar como máximo 10 MB.');
   return {mime,nombre:documentoNombre(file.name),size:file.size};
 }
 async function verificarContenidoDocumento(file,mime){
@@ -1180,7 +1181,7 @@ function avisoConexionSeguimiento(mensaje=''){
   aviso.textContent=mensaje;aviso.hidden=!mensaje;
 }
 function fechaPublica(fecha){if(!fecha)return '—';const [a,m,d]=String(fecha).slice(0,10).split('-');return a&&m&&d?`${d}/${m}/${a}`:String(fecha);}
-function fechaHoraPublica(valor){return valor?new Date(valor).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}):'—';}
+function fechaHoraPublica(valor){return valor?new Date(valor).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short',hourCycle:'h23'}):'—';}
 function nivelSeguimiento(estado){return estado==='Programado'?1:estado==='En camino'?2:3;}
 async function cargarSeguimientoPublico(silencioso=false){
   showView('view-tracking');
@@ -1213,7 +1214,7 @@ async function cargarSeguimientoPublico(silencioso=false){
       <div class="tracking-meta-row"><span>Inicio del viaje</span><span class="tnum">${esc(fechaHoraPublica(r.salida_at))}</span></div>
       ${r.cierre_at?`<div class="tracking-meta-row"><span>Cierre de entrega</span><span class="tnum">${esc(fechaHoraPublica(r.cierre_at))}</span></div>`:''}
     </div>
-    <div style="font-size:9.5px;color:var(--tx4);text-align:center;margin-top:18px">Actualizado ${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})} · se refresca automáticamente</div>`;
+    <div style="font-size:9.5px;color:var(--tx4);text-align:center;margin-top:18px">Actualizado ${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})} · se refresca automáticamente</div>`;
 }
 
 // intentar restaurar sesión al cargar
@@ -1633,7 +1634,7 @@ function renderDash(){
   const avisoConfig=bloqueos.length?`<div class="warning-box" style="margin:14px 20px 0"><strong>Operación real bloqueada.</strong> Falta completar ${esc(detalleBloqueos)}.${esperaResponsable?' La habilitación técnica sólo puede confirmarla el responsable de GoRemitos.':''}<div class="setup-actions"><button type="button" class="btn bo" onclick="iniciarDemo()"><i class="ti ti-player-play"></i>Probar circuito sin guardar</button>${puedeConfigurar?'<button type="button" class="btn bl" onclick="goTab(\'usuarios\')"><i class="ti ti-settings"></i>Configurar operación real</button>':''}</div></div>`:'';
   const act=remitos.slice(0,5).map(r=>{
     const s=estadoVisual(r);
-    const hora=r.tsFirma||r.ts?new Date(r.tsFirma||r.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+    const hora=r.tsFirma||r.ts?new Date(r.tsFirma||r.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}):'';
     let sub=s.lbl;
     if(r.receptor?.nombre)sub=`Firmado por ${esc(r.receptor.nombre)}`;
     else if(r.chofer)sub=`${s.lbl} · ${esc(r.chofer)}`;
@@ -1793,7 +1794,7 @@ function lRow(r){
   if(r.dir&&r.dir!=='—')metas.push(esc(r.dir));
   if(r.chofer)metas.push(esc(r.chofer));
   if(r.receptor?.nombre)metas.push(`${esc(r.receptor.nombre)} (DNI ${esc(r.receptor.dni)})`);
-  if(r.tsFirma)metas.push(new Date(r.tsFirma).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}));
+  if(r.tsFirma)metas.push(new Date(r.tsFirma).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}));
   else if(r.fecha)metas.push(r.fecha);
   const extra=[];
   const fotos=(r.itemsEstado||[]).filter(i=>i.foto).length;
@@ -1859,7 +1860,7 @@ async function verDetalle(id){
       ${r.tel?`<button type="button" class="crow click" onclick='llamarRemito(${js(r.id)})'><i class="ti ti-phone"></i><div style="flex:1"><div class="cl">Teléfono</div><div class="cv tnum">${esc(r.tel)}${r.contacto?' · '+esc(r.contacto):''}</div></div><span class="act">Llamar</span></button>`:r.contacto?`<div class="crow"><i class="ti ti-user"></i><div><div class="cl">Contacto</div><div class="cv">${esc(r.contacto)}</div></div></div>`:''}
       <div class="crow"><i class="ti ti-calendar"></i><div><div class="cl">Fecha</div><div class="cv tnum">${esc(r.fecha||'—')}</div></div></div>
       ${r.chofer?`<div class="crow"><i class="ti ti-truck"></i><div><div class="cl">Chofer</div><div class="cv">${esc(r.chofer)}</div></div></div>`:''}
-      ${r.salidaAt?`<div class="crow"><i class="ti ti-clock-play"></i><div><div class="cl">Inicio del viaje</div><div class="cv tnum">${new Date(r.salidaAt).toLocaleString('es-AR')}</div></div></div>`:''}
+      ${r.salidaAt?`<div class="crow"><i class="ti ti-clock-play"></i><div><div class="cl">Inicio del viaje</div><div class="cv tnum">${new Date(r.salidaAt).toLocaleString('es-AR',{hourCycle:'h23'})}</div></div></div>`:''}
     </div>`:''}
     ${r.documentoUrl?`<div class="card">
       <div class="crow"><i class="ti ti-file-description"></i><div style="flex:1;min-width:0"><div class="cl">Remito original emitido por la empresa</div><div class="cv" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.documentoNombre||'Documento adjunto')}</div><div style="font-size:10px;color:var(--tx4);margin-top:2px">${esc(bytesLegibles(r.documentoSize))} · custodia privada</div></div></div>
@@ -1871,7 +1872,7 @@ async function verDetalle(id){
     ${r.nota?`<div style="margin:12px 20px 0;padding:11px 13px;border:1px solid var(--bd);border-radius:10px;font-size:12px;color:var(--tx2)">${esc(r.nota)}</div>`:''}
     ${r.obs?`<div style="margin:12px 20px 0;padding:11px 13px;border:1px solid var(--red-bd);border-radius:10px;font-size:12px;color:var(--red)">${esc(r.obs)}</div>`:''}
     ${r.receptor?.nombre?`<div class="card">
-      <div class="crow"><i class="ti ti-signature"></i><div style="flex:1"><div class="cl">Firmado por</div><div class="cv">${esc(r.receptor.nombre)} · DNI ${esc(r.receptor.dni)}</div>${r.tsFirma?`<div style="font-size:11px;color:var(--tx4);margin-top:2px" class="tnum">${new Date(r.tsFirma).toLocaleString('es-AR')}</div>`:''}</div></div>
+      <div class="crow"><i class="ti ti-signature"></i><div style="flex:1"><div class="cl">Firmado por</div><div class="cv">${esc(r.receptor.nombre)} · DNI ${esc(r.receptor.dni)}</div>${r.tsFirma?`<div style="font-size:11px;color:var(--tx4);margin-top:2px" class="tnum">${new Date(r.tsFirma).toLocaleString('es-AR',{hourCycle:'h23'})}</div>`:''}</div></div>
       ${r.firma?`<div style="padding:12px 15px;border-top:1px solid var(--bd-soft)"><div style="background:#fff;border-radius:8px;padding:5px;border:1px solid var(--bd)"><img src="${escAttr(r.firma)}" alt="Firma del receptor" style="width:100%;display:block;max-height:85px;object-fit:contain"></div></div>`:''}
     </div>`:''}
     ${r.evidenceHash?`<div class="card"><div class="crow"><i class="ti ti-shield-check"></i><div><div class="cl">Identificador de integridad</div><div class="hash">${esc(r.evidenceHash)}</div></div></div></div>`:''}
@@ -1894,7 +1895,7 @@ async function cargarEventosRemito(id){
   const {data,error}=await sb.from('remito_eventos').select('evento,created_at').eq('remito_id',id).order('created_at',{ascending:true});
   if(error){el.innerHTML='<div class="sub" style="padding:0 20px">No se pudo cargar la trazabilidad.</div>';return;}
   const labels={creado:'Entrega programada',editado:'Entrega programada editada',documento_asociado_v27:'Remito original asociado',entrega_iniciada_v27:'Viaje iniciado',entrega_cerrada:'Entrega cerrada',entrega_cerrada_v26:'Entrega cerrada y evidencias verificadas',entrega_cerrada_v27:'Entrega cerrada con documento y evidencias verificadas',manual_cargado:'Respaldo manual cargado',manual_cargado_v26:'Respaldo manual verificado',pendiente_eliminado:'Pendiente eliminado',pendiente_eliminado_v27:'Entrega programada eliminada',chofer_desasignado:'Chofer desasignado'};
-  el.innerHTML=(data||[]).map(ev=>`<div class="rowitem"><span class="dot" style="background:var(--tx3)"></span><div style="flex:1"><div class="rt">${esc(labels[ev.evento]||ev.evento)}</div></div><span class="time tnum">${new Date(ev.created_at).toLocaleString('es-AR')}</span></div>`).join('')||'<div class="sub" style="padding:0 20px">Sin eventos registrados.</div>';
+  el.innerHTML=(data||[]).map(ev=>`<div class="rowitem"><span class="dot" style="background:var(--tx3)"></span><div style="flex:1"><div class="rt">${esc(labels[ev.evento]||ev.evento)}</div></div><span class="time tnum">${new Date(ev.created_at).toLocaleString('es-AR',{hourCycle:'h23'})}</span></div>`).join('')||'<div class="sub" style="padding:0 20px">Sin eventos registrados.</div>';
 }
 
 /* ===== USUARIOS ===== */
@@ -2090,7 +2091,7 @@ async function cargarErroresRecientes(){
   const el=document.getElementById('plat-errors');if(!el)return;
   const {data,error}=await sb.rpc('listar_errores_recientes_v26');
   if(error){el.innerHTML=`<div class="sub" style="color:var(--red)">${esc(error.message)}</div>`;return;}
-  el.innerHTML=(data||[]).slice(0,20).map(e=>`<div class="ucard" style="display:block"><div class="un">${esc(e.contexto)} · ${esc(e.empresa_nombre||'Sin empresa')}</div><div class="ur" style="margin-top:4px">${esc(e.mensaje)}</div><div class="ur" style="margin-top:4px">${new Date(e.created_at).toLocaleString('es-AR')}</div></div>`).join('')||'<div class="sub">No se registraron errores de usuarios.</div>';
+  el.innerHTML=(data||[]).slice(0,20).map(e=>`<div class="ucard" style="display:block"><div class="un">${esc(e.contexto)} · ${esc(e.empresa_nombre||'Sin empresa')}</div><div class="ur" style="margin-top:4px">${esc(e.mensaje)}</div><div class="ur" style="margin-top:4px">${new Date(e.created_at).toLocaleString('es-AR',{hourCycle:'h23'})}</div></div>`).join('')||'<div class="sub">No se registraron errores de usuarios.</div>';
 }
 function opcionesRol(rol){
   return `<option value="chofer" ${rol==='chofer'?'selected':''}>Chofer</option><option value="oficina" ${rol==='oficina'?'selected':''}>Oficina</option><option value="admin" ${rol==='admin'?'selected':''}>Admin</option>`;
@@ -2288,9 +2289,12 @@ async function guardarRemito(){
     if(documentoSubido&&anterior?.documentoUrl&&anterior.documentoUrl!==documentoSubido)await limpiarDocumentosHuerfanos([anterior.documentoUrl]);
   }catch(error){if(documentoSubido)await limpiarDocumentosHuerfanos([documentoSubido]);operacionEnCurso=false;registrarError('guardar_remito',error);alert('No se pudo confirmar el guardado: '+(error.message||error)+'. Tus datos siguen en el formulario.');setBusy(btn,false,eraEdicion?'Guardar cambios':cu.modoPruebaInterna?'Programar prueba':'Programar entrega');return;}
   limpiarEstadoFormulario();
-  await refrescarDatos();
-  remitoActual=await recargarRemito(remId);editandoId=null;documentoNuevo=null;
-  operacionEnCurso=false;
+  editandoId=null;documentoNuevo=null;
+  try{
+    await refrescarDatos();
+    remitoActual=await recargarRemito(remId);
+  }catch(error){registrarError('recargar_remito_guardado',error);operacionEnCurso=false;alert('El remito ya quedó guardado. No pudimos actualizar la pantalla; consultalo en Remitos antes de volver a cargarlo.');goTab('remitos');return;}
+  finally{operacionEnCurso=false;}
   const r=remitoActual;
   if(!r){alert('El remito se guardó, pero no se pudo recargar. Volvé a Remitos.');goTab('remitos');return;}
   document.querySelector('#nv-ok .banner-tit').textContent=r.esPrueba?(eraEdicion?'Prueba actualizada':'Prueba programada'):(eraEdicion?'Entrega actualizada':'Entrega programada');
@@ -2355,7 +2359,7 @@ function renderEntrega(){
   entregaSeleccionadaId=null;
   if(!pendientes.length)return `<div class="screen active delivery-list-screen">${empty('ti-circle-check','Sin entregas pendientes','Tus entregas asignadas aparecerán acá.')}<div class="pad"><button class="btn bl" onclick="actualizarEntregas()">Actualizar entregas</button></div></div>`;
   const mas=totalPendientesChofer>entregasPendientes.length?`<div class="pad"><button class="btn bl" id="cargar-mas-pendientes" onclick="cargarMasPendientes()">Cargar más entregas (${totalPendientesChofer-entregasPendientes.length})</button></div>`:'';
-  return `<div class="screen active delivery-list-screen"><div class="pagehead"><div class="tit">Mis entregas</div><div class="sub">${totalPendientesChofer} activa${totalPendientesChofer!==1?'s':''} o programada${totalPendientesChofer!==1?'s':''} · ordenadas por fecha</div></div><div class="list-panel" style="margin-top:14px">${pendientes.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))).map(r=>`<button type="button" class="lrow hot" onclick='abrirEntrega(${js(r.id)})'><div class="top"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="num tnum">N° ${esc(r.num)}</span>${badgePrueba(r)}${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div><div class="cli">${esc(r.cliente)}</div><div class="meta">${esc(r.dir)} · ${esc(r.fecha)}${r.salidaAt?` · salida ${new Date(r.salidaAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`:''}</div></button>`).join('')}</div>${mas}</div>`;
+  return `<div class="screen active delivery-list-screen"><div class="pagehead"><div class="tit">Mis entregas</div><div class="sub">${totalPendientesChofer} activa${totalPendientesChofer!==1?'s':''} o programada${totalPendientesChofer!==1?'s':''} · ordenadas por fecha</div></div><div class="list-panel" style="margin-top:14px">${pendientes.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))).map(r=>`<button type="button" class="lrow hot" onclick='abrirEntrega(${js(r.id)})'><div class="top"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="num tnum">N° ${esc(r.num)}</span>${badgePrueba(r)}${statusPill(r)}</div><i class="ti ti-chevron-right chev"></i></div><div class="cli">${esc(r.cliente)}</div><div class="meta">${esc(r.dir)} · ${esc(r.fecha)}${r.salidaAt?` · salida ${new Date(r.salidaAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}`:''}</div></button>`).join('')}</div>${mas}</div>`;
 }
 async function actualizarEntregas(){const [ok]=await refrescarDatos();if(ok)goTab('entrega');else mostrarErrorCarga();}
 function abrirEntrega(id){
@@ -2664,7 +2668,7 @@ async function bajarPDF(){
     if(rem.esPrueba){doc.setDrawColor(...OR);doc.setFillColor(255,247,237);doc.roundedRect(m,y-5,W-m*2,11,2,2,'FD');doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...OR);doc.text('DOCUMENTO DE PRUEBA · NO CORRESPONDE A UNA ENTREGA REAL',W/2,y+1.5,{align:'center'});y+=15;}
     const esManual=rem.estado==='Manual',cf=esManual?'RESPALDO MANUAL':({ok:'CONFORME',disc:'DISCONFORME',rech:'RECHAZADO'}[rem.conformidad]||'PENDIENTE'),cc=esManual?GR:rem.conformidad==='ok'?[22,163,74]:rem.conformidad==='disc'?[220,38,38]:[217,119,6];
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...cc);doc.setDrawColor(...cc);doc.roundedRect(m,y-4.5,doc.getTextWidth(cf)+10,8,1.5,1.5,'S');doc.text(cf,m+5,y+1);y+=12;
-    campo('Empresa',rem.snapshot?.empresa?.razon_social||rem.snapshot?.empresa?.nombre||cu.empresaRazonSocial||cu.empresa);campo('CUIT',rem.snapshot?.empresa?.cuit||cu.empresaCuit);campo('Domicilio legal',rem.snapshot?.empresa?.domicilio_privacidad||cu.empresaDomicilioPrivacidad);campo('Privacidad',rem.snapshot?.empresa?.email_privacidad||cu.empresaEmailPrivacidad);campo('Conservación',rem.snapshot?.empresa?.politica_retencion||cu.empresaPoliticaRetencion);campo('Cliente',rem.cliente);campo('Dirección',rem.dir);campo('Contacto',rem.contacto);campo('Fecha prevista',rem.fecha);campo('Inicio del viaje',rem.salidaAt?new Date(rem.salidaAt).toLocaleString('es-AR'):null);campo('Chofer',rem.chofer);campo('Documento original',rem.documentoNombre);campo('Hash documento',rem.documentoSha256);
+    campo('Empresa',rem.snapshot?.empresa?.razon_social||rem.snapshot?.empresa?.nombre||cu.empresaRazonSocial||cu.empresa);campo('CUIT',rem.snapshot?.empresa?.cuit||cu.empresaCuit);campo('Domicilio legal',rem.snapshot?.empresa?.domicilio_privacidad||cu.empresaDomicilioPrivacidad);campo('Privacidad',rem.snapshot?.empresa?.email_privacidad||cu.empresaEmailPrivacidad);campo('Conservación',rem.snapshot?.empresa?.politica_retencion||cu.empresaPoliticaRetencion);campo('Cliente',rem.cliente);campo('Dirección',rem.dir);campo('Contacto',rem.contacto);campo('Fecha prevista',rem.fecha);campo('Inicio del viaje',rem.salidaAt?new Date(rem.salidaAt).toLocaleString('es-AR',{hourCycle:'h23'}):null);campo('Chofer',rem.chofer);campo('Documento original',rem.documentoNombre);campo('Hash documento',rem.documentoSha256);
     if(rem.documentoUrl){espacio(14);textoEnvuelto('El remito original fue emitido por la empresa usuaria y se conserva como documento privado. GoRemitos registra su seguimiento y la constancia de entrega; no lo emite ni reemplaza.',m,W-m*2,7.5,'italic',GR);y+=2;}
     const mercaderia=rem.itemsEstado||rem.items||[];
     if(mercaderia.length){
@@ -2683,7 +2687,7 @@ async function bajarPDF(){
       espacio(55);y+=3;doc.setDrawColor(...LN);doc.line(m,y,W-m,y);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...GR);doc.text('RECEPTOR',m,y);y+=6;
       if(rem.receptor?.nombre)textoEnvuelto(`${rem.receptor.nombre} · DNI ${rem.receptor.dni}`,m,W-m*2,10,'normal',TX);
       if(rem.firma){try{agregarImagen(await imagenDataURL(rem.firma,rem.firmaSha256),30);}catch(e){console.warn('firma',e);evidenciasFaltantes.push('firma');}}
-      if(rem.tsFirma){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(`Registrado: ${new Date(rem.tsFirma).toLocaleString('es-AR')}`,m,y);y+=5;}
+      if(rem.tsFirma){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(`Registrado: ${new Date(rem.tsFirma).toLocaleString('es-AR',{hourCycle:'h23'})}`,m,y);y+=5;}
     }
     if(rem.evidenceHash){espacio(12);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GR);doc.text('HASH DE LA CONSTANCIA',m,y);y+=4;textoEnvuelto(rem.evidenceHash,m,W-m*2,6.5,'normal',GR);}
     for(const ev of rem.snapshot?.evidencias||[]){const archivo=ev?.archivo||{};if(!archivo.sha256)continue;espacio(13);textoEnvuelto(`${ev.tipo||'evidencia'}${ev.item_id?' · '+ev.item_id:''}: ${archivo.sha256}`,m,W-m*2,6.2,'normal',GR);}

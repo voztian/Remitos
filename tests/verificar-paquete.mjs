@@ -55,7 +55,7 @@ const htmlEstatico=index.slice(0,index.indexOf('<script>'));
 const ids=[...htmlEstatico.matchAll(/\sid="([^"]+)"/g)].map(x=>x[1]);
 assert(new Set(ids).size===ids.length,'Hay IDs HTML estáticos duplicados');
 for(const imagen of htmlEstatico.matchAll(/<img\b[^>]*>/g))assert(/\salt="[^"]*"/.test(imagen[0]),'Hay una imagen estática sin texto alternativo');
-assert(index.includes("const APP_VERSION='2.11.0'"),'Versión web incorrecta');
+assert(index.includes("const APP_VERSION='2.11.1'"),'Versión web incorrecta');
 assert(index.includes('function resumenLocalRemitos()'),'Falta el resumen local del piloto');
 assert(index.includes('if(totalRemitosDisponibles<=remitosPaginados.length)'),'El resumen debe usar la paginación completa, sin contar el cache de pendientes');
 assert(index.includes('@media(min-width:900px)'),'Falta el diseño adaptable de escritorio');
